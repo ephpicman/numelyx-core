@@ -19,8 +19,11 @@ vendor-specific routines are confined to the internal numerical layer.
 | --- | --- |
 | Dense, finite matrix multiplication | CBLAS `cblas_dgemm` (row-major) |
 | Finite square LU factorization | LAPACKE `LAPACKE_dgetrf` (row-major) |
+| Cholesky factorization | LAPACKE `LAPACKE_dpotrf` (row-major), with Numelyx Core symmetry and scale-relative pivot checks |
+| Unpivoted reduced QR | LAPACKE `LAPACKE_dgeqrf` + `LAPACKE_dorgqr` (row-major) |
 | Identity, zero, and sparse multiplication shortcuts | Existing Numelyx Core fast paths |
 | Non-finite LU inputs or dimensions beyond the conservative 32-bit LAPACK boundary | Existing native LU path |
+| Pivoted QR (rank-revealing) | Existing native implementation; its permutation/rank contract remains separate |
 | Non-finite dense multiplication and non-dense multiplication | Existing native multiplication path |
 
 Dense inputs are gathered through the Matrix accessor before calling the
@@ -45,9 +48,9 @@ CBLAS/LAPACKE integer dimensions are range-checked before conversion.
 
 ## Remaining migration
 
-The initial integration dispatches GEMM and LU. QR, Cholesky, SVD, symmetric
-eigen decomposition, and triangular solves remain on their existing native
-implementations until each routine has an adapter, status mapping, regression
-coverage, and differential tests. Sparse and structured Storage fast paths
+The integration currently dispatches GEMM, LU, Cholesky, and unpivoted QR.
+Pivoted QR, SVD, symmetric eigen decomposition, and triangular solves remain
+on their existing native implementations until each routine has an adapter,
+status mapping, regression coverage, and differential tests. Sparse and structured Storage fast paths
 remain Numelyx Core responsibilities; a general sparse solver dependency is
 not introduced by this change.

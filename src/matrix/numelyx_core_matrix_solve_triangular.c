@@ -14,7 +14,11 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include <lapacke.h>
+#ifdef _WIN32
+# include <mkl.h>
+#else
+# include <lapacke.h>
+#endif
 
 # define matrix_triangular_alloc(size) malloc(size)
 # define matrix_triangular_free(pointer) free(pointer)

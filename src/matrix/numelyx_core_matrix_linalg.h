@@ -292,9 +292,11 @@ numelyx_core_matrix_status numelyx_core_matrix_least_squares(
 );
 
 /**
- * Solve A X = B for square, numerically nonsingular A using one LU factorization.
- * Multiple RHS columns share that factorization. The result is independent
- * dense Storage; the output remains NULL on failure.
+ * Solve A X = B for square, numerically nonsingular A using structure-aware
+ * dispatch: exact triangular systems use triangular substitution, symmetric
+ * positive-definite systems use Cholesky plus two triangular solves, and the
+ * general case uses pivoted LU. Multiple RHS columns share each factorization.
+ * The result is independent dense Storage; the output remains NULL on failure.
  */
 numelyx_core_matrix_status numelyx_core_matrix_solve(
     const numelyx_core_matrix *matrix,

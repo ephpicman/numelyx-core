@@ -10,8 +10,10 @@ vendor-specific routines are confined to the internal numerical layer.
 - LAPACK through the LAPACKE C interface.
 - CMake must locate BLAS, LAPACK, `cblas.h`, `lapacke.h`, and the LAPACKE
   library, then verify that both C APIs link successfully.
-- The current CI installs OpenBLAS plus LAPACKE on Ubuntu and the reference
-  LAPACK implementation with CBLAS on Windows.
+- Ubuntu development packages: `libopenblas-dev` and `liblapacke-dev`.
+- Windows dependencies are declared in `vcpkg.json` and installed with
+  `vcpkg install --triplet x64-windows`.
+- CI exercises both dependency setups.
 
 ## Current dispatch
 

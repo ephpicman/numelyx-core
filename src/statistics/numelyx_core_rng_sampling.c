@@ -1,0 +1,199 @@
+/**
+ * @file numelyx_core_rng_sampling.c
+ * @brief Sampling algorithms built on the shared deterministic RNG.
+ *
+ * @details This translation unit implements sampling transforms on top of the shared RNG primitives. It reuses the RNG state API so seeded sampling remains reproducible and does not maintain an independent generator state.
+ */
+
+#include "numelyx_core_rng.h"
+#include "numelyx_core_rng_internal.h"
+#include "numelyx_core_size.h"
+
+#include <stdlib.h>
+
+#if defined(NUMERUS_RNG_TEST_ALLOCATOR)
+void *numelyx_core_rng_test_alloc(size_t size);
+void numelyx_core_rng_test_free(void *pointer);
+# define numelyx_core_rng_alloc(size) numelyx_core_rng_test_alloc(size)
+# define numelyx_core_rng_free(pointer) numelyx_core_rng_test_free(pointer)
+#else
+# define numelyx_core_rng_alloc(size) malloc(size)
+# define numelyx_core_rng_free(pointer) free(pointer)
+#endif
+
+static numelyx_core_rng_status numelyx_core_rng_bounded_index(
+    numelyx_core_rng *rng,
+    size_t bound,
+    size_t *value
+)
+{
+    uint64_t wide_bound;
+    uint64_t threshold;
+    uint32_t high;
+    uint32_t low;
+    uint64_t random_value;
+    numelyx_core_rng_status status;
+
+    if (rng == NULL || value == NULL || bound == 0) {
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
+    if (bound == 1) {
+        *value = 0;
+        return NUMERUS_RNG_SUCCESS;
+    }
+
+    wide_bound = (uint64_t) bound;
+    threshold = (UINT64_C(0) - wide_bound) % wide_bound;
+
+    do {
+        status = numelyx_core_rng_next_u32(rng, &high);
+        if (status != NUMERUS_RNG_SUCCESS) {
+            return status;
+        }
+        status = numelyx_core_rng_next_u32(rng, &low);
+        if (status != NUMERUS_RNG_SUCCESS) {
+            return status;
+        }
+        random_value = ((uint64_t) high << 32u) | (uint64_t) low;
+    } while (random_value < threshold);
+
+    *value = (size_t) (random_value % wide_bound);
+    return NUMERUS_RNG_SUCCESS;
+}
+
+static numelyx_core_rng_status rng_sample_indices_locked(
+    numelyx_core_rng *rng,
+    size_t population_size,
+    size_t sample_size,
+    bool with_replacement,
+    size_t **indices
+)
+{
+    size_t bytes;
+    size_t *values;
+    size_t index;
+    numelyx_core_rng_status status;
+
+    if (indices == NULL) {
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
+    *indices = NULL;
+
+    if (rng == NULL || population_size == 0) {
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
+    if (!with_replacement && sample_size > population_size) {
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
+    if (sample_size == 0) {
+        return NUMERUS_RNG_SUCCESS;
+    }
+    if (!numelyx_core_size_multiply(sample_size, sizeof(*values), &bytes)) {
+        return NUMERUS_RNG_SIZE_OVERFLOW;
+    }
+
+    values = numelyx_core_rng_alloc(bytes);
+    if (values == NULL) {
+        return NUMERUS_RNG_OUT_OF_MEMORY;
+    }
+
+    if (with_replacement) {
+        for (index = 0; index < sample_size; index++) {
+            status = numelyx_core_rng_bounded_index(
+                rng, population_size, &values[index]
+            );
+            if (status != NUMERUS_RNG_SUCCESS) {
+                numelyx_core_rng_free(values);
+                return status;
+            }
+        }
+    } else {
+        size_t selected = 0;
+
+        /*
+         * Algorithm S selects a uniform subset in O(population_size) time
+         * and O(sample_size) storage. A final Fisher-Yates shuffle makes the
+         * output order random rather than leaving selected indices sorted.
+         */
+        for (index = 0;
+             index < population_size && selected < sample_size;
+             index++) {
+            size_t remaining_population = population_size - index;
+            size_t remaining_samples = sample_size - selected;
+            bool take = remaining_samples == remaining_population;
+
+            if (!take) {
+                size_t draw;
+
+                status = numelyx_core_rng_bounded_index(
+                    rng, remaining_population, &draw
+                );
+                if (status != NUMERUS_RNG_SUCCESS) {
+                    numelyx_core_rng_free(values);
+                    return status;
+                }
+                take = draw < remaining_samples;
+            }
+
+            if (take) {
+                values[selected++] = index;
+            }
+        }
+
+        if (selected != sample_size) {
+            numelyx_core_rng_free(values);
+            return NUMERUS_RNG_NUMERICAL_FAILURE;
+        }
+
+        index = sample_size;
+        while (index > 1) {
+            size_t other;
+            size_t temporary;
+
+            index--;
+            status = numelyx_core_rng_bounded_index(rng, index + 1, &other);
+            if (status != NUMERUS_RNG_SUCCESS) {
+                numelyx_core_rng_free(values);
+                return status;
+            }
+
+            temporary = values[index];
+            values[index] = values[other];
+            values[other] = temporary;
+        }
+    }
+
+    *indices = values;
+    return NUMERUS_RNG_SUCCESS;
+}
+
+
+numelyx_core_rng_status numelyx_core_rng_sample_indices(
+    numelyx_core_rng *rng,
+    size_t population_size,
+    size_t sample_size,
+    bool with_replacement,
+    size_t **indices
+)
+{
+    numelyx_core_rng_status status;
+
+    if (indices == NULL) return NUMERUS_RNG_INVALID_ARGUMENT;
+    *indices = NULL;
+    if (rng == NULL) return NUMERUS_RNG_INVALID_ARGUMENT;
+    if (!numelyx_core_rng_lock_internal(rng)) {
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
+    status = rng_sample_indices_locked(
+        rng, population_size, sample_size, with_replacement, indices
+    );
+    numelyx_core_rng_unlock_internal(rng);
+    return status;
+}
+
+void numelyx_core_rng_free_indices(size_t *indices)
+{
+    if (indices != NULL) {
+        numelyx_core_rng_free(indices);
+    }
+}

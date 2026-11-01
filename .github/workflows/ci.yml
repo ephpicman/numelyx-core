@@ -1,0 +1,56 @@
+name: C Core
+
+on:
+  push:
+    branches: [main, migration]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -DNUMELYX_BUILD_TESTS=ON
+      - name: Build
+        run: cmake --build build --config Debug --parallel 2
+      - name: Test
+        run: ctest --test-dir build -C Debug --output-on-failure
+
+  thread-sanitizer:
+    name: ThreadSanitizer (Ubuntu / GCC)
+    runs-on: ubuntu-latest
+    env:
+      CC: gcc
+      TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure with ThreadSanitizer
+        run: cmake -S . -B build-tsan -DNUMELYX_BUILD_TESTS=ON -DNUMELYX_ENABLE_TSAN=ON
+      - name: Build instrumented tests
+        run: cmake --build build-tsan --config Debug --parallel 2
+      - name: Run instrumented tests
+        run: ctest --test-dir build-tsan -C Debug --output-on-failure
+
+  address-undefined-sanitizers:
+    name: AddressSanitizer + UBSan (Ubuntu / GCC)
+    runs-on: ubuntu-latest
+    env:
+      ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure with AddressSanitizer and UBSan
+        run: cmake -S . -B build-asan-ubsan -DNUMELYX_BUILD_TESTS=ON -DNUMELYX_ENABLE_ASAN_UBSAN=ON
+      - name: Build instrumented tests
+        run: cmake --build build-asan-ubsan --config Debug --parallel 2
+      - name: Run instrumented tests
+        run: ctest --test-dir build-asan-ubsan -C Debug --output-on-failure

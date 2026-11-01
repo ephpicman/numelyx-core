@@ -1,0 +1,228 @@
+/**
+ * @file numelyx_core_matrix_views.c
+ * @brief Lazy Matrix views, coordinate remapping, and view construction.
+ *
+ * @details This translation unit implements one focused part of the internal
+ * Matrix API. Public-to-the-subsystem declarations live in the corresponding
+ * Matrix headers; shared representation invariants and status semantics are
+ * defined by the Matrix core and internal headers.
+ */
+
+#include "numelyx_core_matrix_internal.h"
+#include "numelyx_core_size.h"
+
+/** Public wrapper around the private checked slice-view constructor. */
+int numelyx_core_matrix_create_slice(
+    numelyx_core_matrix *parent,
+    size_t row_start,
+    size_t row_count,
+    size_t column_start,
+    size_t column_count,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_slice_view(
+        parent,
+        row_start,
+        row_count,
+        column_start,
+        column_count,
+        matrix
+    );
+}
+
+/** Select rows using an owned copy of the requested indices. */
+int numelyx_core_matrix_create_select_rows(
+    numelyx_core_matrix *parent,
+    const size_t *indices,
+    size_t count,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_selection_view(
+        parent,
+        indices,
+        count,
+        NUMERUS_MATRIX_SELECTION_ROWS,
+        matrix
+    );
+}
+
+/** Select columns using an owned copy of the requested indices. */
+int numelyx_core_matrix_create_select_columns(
+    numelyx_core_matrix *parent,
+    const size_t *indices,
+    size_t count,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_selection_view(
+        parent,
+        indices,
+        count,
+        NUMERUS_MATRIX_SELECTION_COLUMNS,
+        matrix
+    );
+}
+
+/** Create a lazy reshape view preserving row-major traversal order. */
+int numelyx_core_matrix_create_reshape(
+    numelyx_core_matrix *parent,
+    size_t rows,
+    size_t columns,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_reshape_view(
+        parent, rows, columns, matrix
+    );
+}
+
+/** Flatten a Matrix into a single row in row-major order. */
+int numelyx_core_matrix_create_flatten(
+    numelyx_core_matrix *parent,
+    numelyx_core_matrix **matrix
+)
+{
+    size_t element_count;
+
+    if (matrix == NULL) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    *matrix = NULL;
+
+    if (parent == NULL) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+
+    if (!numelyx_core_size_multiply(
+            numelyx_core_matrix_rows(parent),
+            numelyx_core_matrix_columns(parent),
+            &element_count
+        )) {
+        return NUMERUS_MATRIX_OVERFLOW;
+    }
+
+    return numelyx_core_matrix_create_reshape_view(
+        parent, 1, element_count, matrix
+    );
+}
+
+/** Create a lazy constant-padded view. */
+int numelyx_core_matrix_create_pad(
+    numelyx_core_matrix *parent,
+    size_t top,
+    size_t bottom,
+    size_t left,
+    size_t right,
+    double value,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_padding_view(
+        parent, top, bottom, left, right, value, matrix
+    );
+}
+
+/** Create a lazy zero-padded view. */
+int numelyx_core_matrix_create_zero_extend(
+    numelyx_core_matrix *parent,
+    size_t top,
+    size_t bottom,
+    size_t left,
+    size_t right,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_padding_view(
+        parent, top, bottom, left, right, 0.0, matrix
+    );
+}
+
+/** Tile a Matrix lazily across rows and columns. */
+int numelyx_core_matrix_create_repeat(
+    numelyx_core_matrix *parent,
+    size_t row_repetitions,
+    size_t column_repetitions,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_repeat_view(
+        parent, row_repetitions, column_repetitions, matrix
+    );
+}
+
+/** Create a lazy block-diagonal Matrix from repeated copies of parent. */
+int numelyx_core_matrix_create_block_diagonal(
+    numelyx_core_matrix *parent,
+    size_t repetitions,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_block_diagonal_view(
+        parent, repetitions, matrix
+    );
+}
+
+/** Assemble a lazy grid from a row-major array of borrowed Matrix blocks. */
+int numelyx_core_matrix_create_block_grid(
+    numelyx_core_matrix *const *blocks,
+    size_t block_row_count,
+    size_t block_column_count,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_block_grid_view(
+        blocks, block_row_count, block_column_count, matrix
+    );
+}
+
+/** Extract a main or offset diagonal as a lazy row-vector view. */
+int numelyx_core_matrix_create_diagonal_extract(
+    numelyx_core_matrix *parent,
+    ptrdiff_t offset,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_diagonal_extract_view(
+        parent, offset, matrix
+    );
+}
+
+/** Create a lazy square diagonal view from a row or column vector. */
+int numelyx_core_matrix_create_diagonal_from_vector(
+    numelyx_core_matrix *vector,
+    ptrdiff_t offset,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_diagonal_from_vector_view(
+        vector, offset, matrix
+    );
+}
+
+/** Permute all rows using a copied full permutation. */
+int numelyx_core_matrix_create_permute_rows(
+    numelyx_core_matrix *parent,
+    const size_t *permutation,
+    size_t count,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_permutation_view(
+        parent, permutation, count, NUMERUS_MATRIX_SELECTION_ROWS, matrix
+    );
+}
+
+/** Permute all columns using a copied full permutation. */
+int numelyx_core_matrix_create_permute_columns(
+    numelyx_core_matrix *parent,
+    const size_t *permutation,
+    size_t count,
+    numelyx_core_matrix **matrix
+)
+{
+    return numelyx_core_matrix_create_permutation_view(
+        parent, permutation, count, NUMERUS_MATRIX_SELECTION_COLUMNS, matrix
+    );
+}

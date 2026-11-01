@@ -1,0 +1,295 @@
+/**
+ * @file numelyx_core_matrix_views.h
+ * @brief Lazy Matrix views and composition.
+ */
+#ifndef NUMERUS_MATRIX_VIEWS_H
+#define NUMERUS_MATRIX_VIEWS_H
+
+#include "numelyx_core_matrix_types.h"
+
+/**
+ * @brief Create a lazy transpose view of an existing Matrix.
+ *
+ * The returned child exposes parent columns as rows and parent rows as
+ * columns. No element data is copied. The transpose retains the parent until
+ * the view is reclaimed.
+ */
+int numelyx_core_matrix_create_transpose(
+    numelyx_core_matrix *parent,
+    numelyx_core_matrix **matrix
+);
+
+/** Create a lazy view with the order of rows reversed. */
+int numelyx_core_matrix_create_flip_rows(
+    numelyx_core_matrix *parent,
+    numelyx_core_matrix **matrix
+);
+
+/** Create a lazy view with the order of columns reversed. */
+int numelyx_core_matrix_create_flip_columns(
+    numelyx_core_matrix *parent,
+    numelyx_core_matrix **matrix
+);
+
+/** Create a lazy view that omits one row. */
+int numelyx_core_matrix_create_remove_row(
+    numelyx_core_matrix *parent,
+    size_t row,
+    numelyx_core_matrix **matrix
+);
+
+/** Create a lazy view that omits one column. */
+int numelyx_core_matrix_create_remove_column(
+    numelyx_core_matrix *parent,
+    size_t column,
+    numelyx_core_matrix **matrix
+);
+
+/** Create a lazy view that swaps two rows. */
+int numelyx_core_matrix_create_swap_rows(
+    numelyx_core_matrix *parent,
+    size_t row1,
+    size_t row2,
+    numelyx_core_matrix **matrix
+);
+
+/** Create a lazy view that swaps two columns. */
+int numelyx_core_matrix_create_swap_columns(
+    numelyx_core_matrix *parent,
+    size_t column1,
+    size_t column2,
+    numelyx_core_matrix **matrix
+);
+
+/** Create a lazy 90-degree clockwise rotation view. */
+int numelyx_core_matrix_create_rotate_90_clockwise(
+    numelyx_core_matrix *parent,
+    numelyx_core_matrix **matrix
+);
+
+/** Create a lazy 180-degree rotation view. */
+int numelyx_core_matrix_create_rotate_180(
+    numelyx_core_matrix *parent,
+    numelyx_core_matrix **matrix
+);
+
+/** Create a lazy 90-degree counter-clockwise rotation view. */
+int numelyx_core_matrix_create_rotate_90_counterclockwise(
+    numelyx_core_matrix *parent,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * @brief Create a lazy horizontal join of two Matrices.
+ *
+ * Both parents must have the same number of rows. The second Matrix is
+ * appended to the right of the first. The result retains both parents.
+ */
+int numelyx_core_matrix_create_join_horizontal(
+    numelyx_core_matrix *parent,
+    numelyx_core_matrix *parent2,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * @brief Create a lazy vertical join of two Matrices.
+ *
+ * Both parents must have the same number of columns. The second Matrix is
+ * appended below the first. The result retains both parents.
+ */
+int numelyx_core_matrix_create_join_vertical(
+    numelyx_core_matrix *parent,
+    numelyx_core_matrix *parent2,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Create a lazy range slice of a Matrix.
+ *
+ * The slice contains row_count × column_count values starting at the specified
+ * zero-based parent coordinates. Counts must be positive and the complete
+ * range must fit inside the parent. The result retains the parent.
+ */
+int numelyx_core_matrix_create_slice(
+    numelyx_core_matrix *parent,
+    size_t row_start,
+    size_t row_count,
+    size_t column_start,
+    size_t column_count,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Select rows by a copied array of zero-based indices.
+ *
+ * Index order is preserved and repeated indices are allowed. The result is a
+ * lazy view; the index array is copied, while the parent is retained.
+ */
+int numelyx_core_matrix_create_select_rows(
+    numelyx_core_matrix *parent,
+    const size_t *indices,
+    size_t count,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Select columns by a copied array of zero-based indices.
+ *
+ * Index order is preserved and repeated indices are allowed. The result is a
+ * lazy view; the index array is copied, while the parent is retained.
+ */
+int numelyx_core_matrix_create_select_columns(
+    numelyx_core_matrix *parent,
+    const size_t *indices,
+    size_t count,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Create a lazy row-major reshape view.
+ *
+ * The requested shape must contain exactly the same number of elements as
+ * the parent. Logical traversal order is row-major. The parent is retained.
+ */
+int numelyx_core_matrix_create_reshape(
+    numelyx_core_matrix *parent,
+    size_t rows,
+    size_t columns,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Create a lazy row-vector view of all parent elements in row-major order.
+ *
+ * The result has shape 1 × (parent.rows * parent.columns). Element-count
+ * overflow is reported as NUMERUS_MATRIX_OVERFLOW.
+ */
+int numelyx_core_matrix_create_flatten(
+    numelyx_core_matrix *parent,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Create a lazy constant-padded view.
+ *
+ * top/bottom/left/right specify the number of rows or columns added on each
+ * side. Existing values retain their positions; all padding cells use value.
+ * The parent is retained. Dimension overflow is
+ * reported as NUMERUS_MATRIX_OVERFLOW.
+ */
+int numelyx_core_matrix_create_pad(
+    numelyx_core_matrix *parent,
+    size_t top,
+    size_t bottom,
+    size_t left,
+    size_t right,
+    double value,
+    numelyx_core_matrix **matrix
+);
+
+/** Create a lazy zero-padded view with the same shape and ownership rules. */
+int numelyx_core_matrix_create_zero_extend(
+    numelyx_core_matrix *parent,
+    size_t top,
+    size_t bottom,
+    size_t left,
+    size_t right,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Tile a Matrix lazily row_repetitions × column_repetitions times.
+ *
+ * Repetition counts must be positive. The view retains its parent; output dimensions are checked for overflow.
+ */
+int numelyx_core_matrix_create_repeat(
+    numelyx_core_matrix *parent,
+    size_t row_repetitions,
+    size_t column_repetitions,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Create a lazy block-diagonal Matrix containing repetitions copies of parent.
+ *
+ * Off-diagonal blocks are zero. The parent may be rectangular; result
+ * dimensions are (parent.rows * repetitions) ×
+ * (parent.columns * repetitions). Repetitions must be positive, and the
+ * retained parent remains alive until the view is reclaimed.
+ */
+int numelyx_core_matrix_create_block_diagonal(
+    numelyx_core_matrix *parent,
+    size_t repetitions,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Assemble a lazy block grid from a row-major array of Matrix pointers.
+ *
+ * Every block must be non-NULL. Blocks in each block row must have equal row
+ * counts, and blocks in each block column must have equal column counts.
+ * Missing/NULL blocks are rejected rather than implicitly treated as zeros.
+ * The pointer array is copied; each block Matrix is retained by the grid. Grid dimensions and cumulative output sizes are
+ * checked for overflow.
+ */
+int numelyx_core_matrix_create_block_grid(
+    numelyx_core_matrix *const *blocks,
+    size_t block_row_count,
+    size_t block_column_count,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Extract a diagonal into a 1×N row-vector view.
+ *
+ * Offset zero selects the main diagonal; positive offsets select diagonals
+ * above it, and negative offsets select diagonals below it. An offset with no
+ * elements in the Matrix returns NUMERUS_MATRIX_OUT_OF_BOUNDS. The parent is retained until the result is reclaimed.
+ */
+int numelyx_core_matrix_create_diagonal_extract(
+    numelyx_core_matrix *parent,
+    ptrdiff_t offset,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Create a square diagonal view from a row or column vector.
+ *
+ * The main diagonal is selected by offset zero; positive offsets place values
+ * above it and negative offsets below it. The output side length is the vector
+ * length plus the absolute offset, checked for overflow. Off-diagonal elements
+ * are zero. The vector is retained until the result is reclaimed.
+ */
+int numelyx_core_matrix_create_diagonal_from_vector(
+    numelyx_core_matrix *vector,
+    ptrdiff_t offset,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Permute all rows using a full zero-based permutation.
+ *
+ * The index count must equal the parent row count; every index must be in
+ * range and appear exactly once. The index list is copied and the parent is retained.
+ */
+int numelyx_core_matrix_create_permute_rows(
+    numelyx_core_matrix *parent,
+    const size_t *permutation,
+    size_t count,
+    numelyx_core_matrix **matrix
+);
+
+/**
+ * Permute all columns using a full zero-based permutation.
+ *
+ * The index count must equal the parent column count; every index must be in
+ * range and appear exactly once. The index list is copied and the parent is retained.
+ */
+int numelyx_core_matrix_create_permute_columns(
+    numelyx_core_matrix *parent,
+    const size_t *permutation,
+    size_t count,
+    numelyx_core_matrix **matrix
+);
+
+#endif

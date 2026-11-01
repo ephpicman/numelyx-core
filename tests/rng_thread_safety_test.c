@@ -1,0 +1,112 @@
+#include "../numelyx_core_rng.h"
+
+#include <assert.h>
+#include <math.h>
+#include <stdbool.h>
+#include <stdatomic.h>
+#include <stddef.h>
+#include "test_threads.h"
+
+typedef struct {
+    numelyx_core_rng *rng;
+    atomic_size_t *ready;
+    atomic_bool *start;
+    int failed;
+} rng_worker_args;
+
+static int rng_worker(void *argument)
+{
+    rng_worker_args *args = (rng_worker_args *) argument;
+    size_t iteration;
+
+    atomic_fetch_add_explicit(args->ready, 1, memory_order_release);
+    while (!atomic_load_explicit(args->start, memory_order_acquire)) {
+        /* Start all users of the shared RNG together. */
+    }
+
+    for (iteration = 0; iteration < 3000; iteration++) {
+        uint32_t raw;
+        double uniform;
+        double normal;
+        size_t *indices = NULL;
+        size_t *replacement_indices = NULL;
+        size_t index;
+
+        if (numelyx_core_rng_next_u32(args->rng, &raw) != NUMERUS_RNG_SUCCESS ||
+            numelyx_core_rng_uniform(args->rng, &uniform) != NUMERUS_RNG_SUCCESS ||
+            numelyx_core_rng_normal(args->rng, &normal) != NUMERUS_RNG_SUCCESS ||
+            !isfinite(uniform) || uniform < 0.0 || uniform >= 1.0 ||
+            !isfinite(normal) ||
+            numelyx_core_rng_sample_indices(
+                args->rng, 17, 5, false, &indices
+            ) != NUMERUS_RNG_SUCCESS ||
+            indices == NULL ||
+            numelyx_core_rng_sample_indices(
+                args->rng, 17, 5, true, &replacement_indices
+            ) != NUMERUS_RNG_SUCCESS ||
+            replacement_indices == NULL) {
+            args->failed = 1;
+            numelyx_core_rng_free_indices(indices);
+            numelyx_core_rng_free_indices(replacement_indices);
+            break;
+        }
+
+        for (index = 0; index < 5; index++) {
+            size_t other;
+            if (indices[index] >= 17 || replacement_indices[index] >= 17) {
+                args->failed = 1;
+                break;
+            }
+            for (other = index + 1; other < 5; other++) {
+                if (indices[index] == indices[other]) args->failed = 1;
+            }
+        }
+
+        numelyx_core_rng_free_indices(indices);
+        numelyx_core_rng_free_indices(replacement_indices);
+        if (args->failed) break;
+    }
+
+    numelyx_core_rng_destroy(args->rng);
+    return 0;
+}
+
+int main(void)
+{
+    enum { THREAD_COUNT = 8 };
+    numelyx_core_rng *rng = NULL;
+    rng_worker_args arguments[THREAD_COUNT];
+    test_thread_t threads[THREAD_COUNT];
+    atomic_size_t ready;
+    atomic_bool start;
+    size_t index;
+
+    atomic_init(&ready, 0);
+    atomic_init(&start, false);
+
+    assert(numelyx_core_rng_create(12345, 6789, &rng) == NUMERUS_RNG_SUCCESS);
+
+    for (index = 0; index < THREAD_COUNT; index++) {
+        arguments[index].rng = rng;
+        arguments[index].ready = &ready;
+        arguments[index].start = &start;
+        arguments[index].failed = 0;
+        assert(numelyx_core_rng_retain(rng) == NUMERUS_RNG_SUCCESS);
+        assert(test_thread_create(&threads[index], rng_worker, &arguments[index]));
+    }
+
+    while (atomic_load_explicit(&ready, memory_order_acquire) != THREAD_COUNT) {
+        /* Every worker owns a reference before concurrent use begins. */
+    }
+    atomic_store_explicit(&start, true, memory_order_release);
+
+    for (index = 0; index < THREAD_COUNT; index++) {
+        int result = -1;
+        assert(test_thread_join(&threads[index], &result));
+        assert(result == 0);
+        assert(arguments[index].failed == 0);
+    }
+
+    numelyx_core_rng_destroy(rng);
+    return 0;
+}

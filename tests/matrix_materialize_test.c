@@ -8,14 +8,14 @@
  * documentation. This file is test support, not runtime code.
  */
 
-#include "../numerus_matrix.h"
+#include "../numelyx_core_matrix.h"
 
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 
 static int matrix_value_equals(
-    const numerus_matrix *matrix,
+    const numelyx_core_matrix *matrix,
     size_t row,
     size_t column,
     double expected
@@ -23,12 +23,12 @@ static int matrix_value_equals(
 {
     double actual = 0.0;
 
-    return numerus_matrix_get(
+    return numelyx_core_matrix_get(
         matrix, row, column, &actual
     ) == NUMERUS_MATRIX_SUCCESS && actual == expected;
 }
 
-static numerus_matrix_status fail_on_second_row(
+static numelyx_core_matrix_status fail_on_second_row(
     size_t row,
     size_t column,
     size_t *parent_row,
@@ -54,23 +54,23 @@ static void test_materialize_nested_views_and_joins(void)
         1, 3, 1, 2,
         2, 4, 3, 4
     };
-    numerus_matrix *root = NULL;
-    numerus_matrix *transpose = NULL;
-    numerus_matrix *joined = NULL;
-    numerus_matrix *copy = NULL;
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *transpose = NULL;
+    numelyx_core_matrix *joined = NULL;
+    numelyx_core_matrix *copy = NULL;
 
-    assert(numerus_matrix_create_dense(2, 2, values, &root) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, values, &root) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_transpose(root, &transpose) ==
+    assert(numelyx_core_matrix_create_transpose(root, &transpose) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_join_horizontal(transpose, root, &joined) ==
+    assert(numelyx_core_matrix_create_join_horizontal(transpose, root, &joined) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_materialize(joined, &copy) ==
+    assert(numelyx_core_matrix_materialize(joined, &copy) ==
         NUMERUS_MATRIX_SUCCESS);
 
-    assert(numerus_matrix_rows(copy) == 2);
-    assert(numerus_matrix_columns(copy) == 4);
-    assert(numerus_matrix_storage_kind(copy) == NUMERUS_STORAGE_DENSE);
+    assert(numelyx_core_matrix_rows(copy) == 2);
+    assert(numelyx_core_matrix_columns(copy) == 4);
+    assert(numelyx_core_matrix_storage_kind(copy) == NUMERUS_STORAGE_DENSE);
     for (size_t row = 0; row < 2; row++) {
         for (size_t column = 0; column < 4; column++) {
             assert(matrix_value_equals(
@@ -80,142 +80,142 @@ static void test_materialize_nested_views_and_joins(void)
     }
 
     /* The materialized copy no longer depends on the source or its parents. */
-    numerus_matrix_destroy(joined);
-    numerus_matrix_destroy(transpose);
-    numerus_matrix_destroy(root);
+    numelyx_core_matrix_destroy(joined);
+    numelyx_core_matrix_destroy(transpose);
+    numelyx_core_matrix_destroy(root);
     assert(matrix_value_equals(copy, 0, 1, 3.0));
     assert(matrix_value_equals(copy, 1, 3, 4.0));
-    numerus_matrix_destroy(copy);
+    numelyx_core_matrix_destroy(copy);
 }
 
 static void test_materialize_binary_node(void)
 {
     const double values[] = {1, 2, 3, 4};
-    numerus_matrix *root = NULL;
-    numerus_matrix *sum = NULL;
-    numerus_matrix *copy = NULL;
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *sum = NULL;
+    numelyx_core_matrix *copy = NULL;
 
-    assert(numerus_matrix_create_dense(2, 2, values, &root) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, values, &root) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_add(root, root, &sum) ==
+    assert(numelyx_core_matrix_create_add(root, root, &sum) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_materialize(sum, &copy) ==
+    assert(numelyx_core_matrix_materialize(sum, &copy) ==
         NUMERUS_MATRIX_SUCCESS);
 
-    assert(numerus_matrix_storage_kind(copy) == NUMERUS_STORAGE_DENSE);
+    assert(numelyx_core_matrix_storage_kind(copy) == NUMERUS_STORAGE_DENSE);
     assert(matrix_value_equals(copy, 0, 0, 2.0));
     assert(matrix_value_equals(copy, 0, 1, 4.0));
     assert(matrix_value_equals(copy, 1, 0, 6.0));
     assert(matrix_value_equals(copy, 1, 1, 8.0));
 
-    numerus_matrix_destroy(copy);
-    numerus_matrix_destroy(sum);
-    numerus_matrix_destroy(root);
+    numelyx_core_matrix_destroy(copy);
+    numelyx_core_matrix_destroy(sum);
+    numelyx_core_matrix_destroy(root);
 }
 
 static void test_materialize_failures(void)
 {
     const double values[] = {1, 2, 3, 4};
-    numerus_matrix *root = NULL;
-    numerus_matrix *failing = NULL;
-    numerus_matrix *huge = NULL;
-    numerus_matrix *copy = NULL;
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *failing = NULL;
+    numelyx_core_matrix *huge = NULL;
+    numelyx_core_matrix *copy = NULL;
 
-    assert(numerus_matrix_create_dense(2, 2, values, &root) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, values, &root) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_from_parent_with_transforms(
+    assert(numelyx_core_matrix_create_from_parent_with_transforms(
         root, 2, 2, fail_on_second_row, NULL, NULL, &failing
     ) == NUMERUS_MATRIX_SUCCESS);
 
     copy = root;
-    assert(numerus_matrix_materialize(failing, &copy) ==
+    assert(numelyx_core_matrix_materialize(failing, &copy) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(copy == NULL);
 
-    assert(numerus_matrix_create_from_parent(
+    assert(numelyx_core_matrix_create_from_parent(
         root, SIZE_MAX, 2, &huge
     ) == NUMERUS_MATRIX_SUCCESS);
     copy = root;
-    assert(numerus_matrix_materialize(huge, &copy) ==
+    assert(numelyx_core_matrix_materialize(huge, &copy) ==
         NUMERUS_MATRIX_OVERFLOW);
     assert(copy == NULL);
 
-    assert(numerus_matrix_materialize(NULL, &copy) ==
+    assert(numelyx_core_matrix_materialize(NULL, &copy) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(copy == NULL);
-    assert(numerus_matrix_materialize(root, NULL) ==
+    assert(numelyx_core_matrix_materialize(root, NULL) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
 
-    numerus_matrix_destroy(huge);
-    numerus_matrix_destroy(failing);
-    numerus_matrix_destroy(root);
+    numelyx_core_matrix_destroy(huge);
+    numelyx_core_matrix_destroy(failing);
+    numelyx_core_matrix_destroy(root);
 }
 
 
 static void test_materialize_rectangular_and_degenerate_view_shapes(void)
 {
     const double values[] = {1, 2, 3, 4, 5, 6};
-    numerus_matrix *root = NULL;
-    numerus_matrix *transpose = NULL;
-    numerus_matrix *nested = NULL;
-    numerus_matrix *row_view = NULL;
-    numerus_matrix *column_view = NULL;
-    numerus_matrix *materialized = NULL;
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *transpose = NULL;
+    numelyx_core_matrix *nested = NULL;
+    numelyx_core_matrix *row_view = NULL;
+    numelyx_core_matrix *column_view = NULL;
+    numelyx_core_matrix *materialized = NULL;
     size_t row;
     size_t column;
 
-    assert(numerus_matrix_create_dense(2, 3, values, &root) ==
+    assert(numelyx_core_matrix_create_dense(2, 3, values, &root) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_transpose(root, &transpose) ==
+    assert(numelyx_core_matrix_create_transpose(root, &transpose) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_slice(
+    assert(numelyx_core_matrix_create_slice(
         transpose, 1, 2, 0, 2, &nested
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_materialize(nested, &materialized) ==
+    assert(numelyx_core_matrix_materialize(nested, &materialized) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_rows(materialized) == 2);
-    assert(numerus_matrix_columns(materialized) == 2);
+    assert(numelyx_core_matrix_rows(materialized) == 2);
+    assert(numelyx_core_matrix_columns(materialized) == 2);
 
     for (row = 0; row < 2; row++) {
         for (column = 0; column < 2; column++) {
             double view_value;
             double copy_value;
 
-            assert(numerus_matrix_get(nested, row, column, &view_value) ==
+            assert(numelyx_core_matrix_get(nested, row, column, &view_value) ==
                 NUMERUS_MATRIX_SUCCESS);
-            assert(numerus_matrix_get(materialized, row, column, &copy_value) ==
+            assert(numelyx_core_matrix_get(materialized, row, column, &copy_value) ==
                 NUMERUS_MATRIX_SUCCESS);
             assert(copy_value == view_value);
         }
     }
 
-    assert(numerus_matrix_create_slice(
+    assert(numelyx_core_matrix_create_slice(
         root, 1, 1, 0, 3, &row_view
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_materialize(row_view, &materialized) ==
+    assert(numelyx_core_matrix_materialize(row_view, &materialized) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_rows(materialized) == 1);
-    assert(numerus_matrix_columns(materialized) == 3);
-    numerus_matrix_destroy(materialized);
+    assert(numelyx_core_matrix_rows(materialized) == 1);
+    assert(numelyx_core_matrix_columns(materialized) == 3);
+    numelyx_core_matrix_destroy(materialized);
     materialized = NULL;
 
-    assert(numerus_matrix_create_slice(
+    assert(numelyx_core_matrix_create_slice(
         transpose, 0, 3, 1, 1, &column_view
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_materialize(column_view, &materialized) ==
+    assert(numelyx_core_matrix_materialize(column_view, &materialized) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_rows(materialized) == 3);
-    assert(numerus_matrix_columns(materialized) == 1);
+    assert(numelyx_core_matrix_rows(materialized) == 3);
+    assert(numelyx_core_matrix_columns(materialized) == 1);
     assert(matrix_value_equals(materialized, 0, 0, 4.0));
     assert(matrix_value_equals(materialized, 1, 0, 5.0));
     assert(matrix_value_equals(materialized, 2, 0, 6.0));
 
-    numerus_matrix_destroy(materialized);
-    numerus_matrix_destroy(column_view);
-    numerus_matrix_destroy(row_view);
-    numerus_matrix_destroy(nested);
-    numerus_matrix_destroy(transpose);
-    numerus_matrix_destroy(root);
+    numelyx_core_matrix_destroy(materialized);
+    numelyx_core_matrix_destroy(column_view);
+    numelyx_core_matrix_destroy(row_view);
+    numelyx_core_matrix_destroy(nested);
+    numelyx_core_matrix_destroy(transpose);
+    numelyx_core_matrix_destroy(root);
 }
 
 int main(void)

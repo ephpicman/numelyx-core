@@ -101,7 +101,10 @@ numelyx_core_rng_status numelyx_core_rng_sample_indices(
 /** Release an index array returned by numelyx_core_rng_sample_indices(); accepts NULL. */
 void numelyx_core_rng_free_indices(size_t *indices);
 
-/** Destroy one state; accepts NULL. */
+/** Retain a state for shared use; caller must already hold a valid reference. */
+numelyx_core_rng_status numelyx_core_rng_retain(numelyx_core_rng *rng);
+
+/** Destroy one state reference; accepts NULL. */
 void numelyx_core_rng_destroy(numelyx_core_rng *rng);
 
 #endif

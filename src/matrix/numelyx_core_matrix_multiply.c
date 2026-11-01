@@ -232,11 +232,19 @@ static numelyx_core_matrix_status matrix_try_diagonal_product(
     numelyx_core_matrix_status status;
 
     *used = false;
-    if (rows == inner_dimension) {
+    if (rows == inner_dimension &&
+        (inner_dimension >= 16 ||
+         numelyx_core_matrix_storage_kind(left) == NUMERUS_STORAGE_DIAGONAL ||
+         numelyx_core_matrix_storage_kind(left) == NUMERUS_STORAGE_SCALED_IDENTITY ||
+         numelyx_core_matrix_storage_kind(left) == NUMERUS_STORAGE_IDENTITY)) {
         status = matrix_matches_diagonal(left, &left_diagonal);
         if (status != NUMERUS_MATRIX_SUCCESS) return status;
     }
-    if (inner_dimension == columns) {
+    if (inner_dimension == columns &&
+        (inner_dimension >= 16 ||
+         numelyx_core_matrix_storage_kind(right) == NUMERUS_STORAGE_DIAGONAL ||
+         numelyx_core_matrix_storage_kind(right) == NUMERUS_STORAGE_SCALED_IDENTITY ||
+         numelyx_core_matrix_storage_kind(right) == NUMERUS_STORAGE_IDENTITY)) {
         status = matrix_matches_diagonal(right, &right_diagonal);
         if (status != NUMERUS_MATRIX_SUCCESS) return status;
     }

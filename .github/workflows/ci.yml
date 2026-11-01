@@ -27,8 +27,13 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          vcpkg install lapack-reference --triplet x64-windows --feature-flags=manifests
-      - name: Configure
+          vcpkg install lapack-reference[cblas]:x64-windows
+      - name: Configure (Ubuntu)
+        if: runner.os == 'Linux'
+        run: cmake -S . -B build -DNUMELYX_BUILD_TESTS=ON
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
         run: cmake -S . -B build -DNUMELYX_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows
       - name: Build
         run: cmake --build build --config Debug --parallel 2
@@ -43,6 +48,10 @@ jobs:
       TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
     steps:
       - uses: actions/checkout@v4
+      - name: Install BLAS/LAPACK dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev liblapacke-dev
       - name: Configure with ThreadSanitizer
         run: cmake -S . -B build-tsan -DNUMELYX_BUILD_TESTS=ON -DNUMELYX_ENABLE_TSAN=ON
       - name: Build instrumented tests
@@ -58,6 +67,10 @@ jobs:
       UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
     steps:
       - uses: actions/checkout@v4
+      - name: Install BLAS/LAPACK dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libopenblas-dev liblapacke-dev
       - name: Configure with AddressSanitizer and UBSan
         run: cmake -S . -B build-asan-ubsan -DNUMELYX_BUILD_TESTS=ON -DNUMELYX_ENABLE_ASAN_UBSAN=ON
       - name: Build instrumented tests

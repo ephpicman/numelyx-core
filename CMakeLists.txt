@@ -39,11 +39,21 @@ if(NUMELYX_BUILD_TESTS)
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/*_test.c"
     )
 
+    set(NUMELYX_ALLOC_WRAP_TESTS
+        gaussian_log_density_test
+        gaussian_sampling_test
+        matrix_allocation_failure_test
+        optimizer_test
+        rng_sampling_test
+        rng_state_test
+        storage_allocation_failure_test
+    )
+
     foreach(test_source IN LISTS NUMELYX_TEST_SOURCES)
         get_filename_component(test_name "${test_source}" NAME_WE)
 
         # These tests inject allocation failures via GNU ld --wrap.
-        if(test_name MATCHES "^(matrix|storage)_allocation_failure_test$"
+        if(test_name IN_LIST NUMELYX_ALLOC_WRAP_TESTS
            AND NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND UNIX AND NOT APPLE))
             message(STATUS "Skipping ${test_name}: GNU ld --wrap is required")
             continue()
@@ -52,7 +62,7 @@ if(NUMELYX_BUILD_TESTS)
         add_executable(${test_name} "${test_source}")
         target_link_libraries(${test_name} PRIVATE Numelyx::Core)
 
-        if(test_name MATCHES "^(matrix|storage)_allocation_failure_test$")
+        if(test_name IN_LIST NUMELYX_ALLOC_WRAP_TESTS)
             target_link_options(${test_name} PRIVATE
                 "-Wl,--wrap=malloc"
                 "-Wl,--wrap=calloc"

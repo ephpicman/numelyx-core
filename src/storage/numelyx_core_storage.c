@@ -10,6 +10,7 @@
 
 #include "numelyx_core_storage.h"
 #include "numelyx_core_size.h"
+#include "numelyx_core_lifetime.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -23,6 +24,7 @@
  * private: all callers must go through the validated constructor/accessor API.
  */
 struct numelyx_core_storage {
+    numelyx_core_lifetime lifetime;
     numelyx_core_storage_kind kind;
     size_t rows;
     size_t columns;
@@ -70,6 +72,8 @@ static int triangular_count(size_t n, size_t *result)
         : NUMERUS_STORAGE_OVERFLOW;
 }
 
+static void storage_destroy_final(void *object);
+
 /* Allocate and initialise the opaque Storage object itself. */
 
 static int allocate_storage(
@@ -89,6 +93,13 @@ static int allocate_storage(
     result = numelyx_core_calloc(1, sizeof(*result));
     if (result == NULL) {
         return NUMERUS_STORAGE_OUT_OF_MEMORY;
+    }
+
+    if (numelyx_core_lifetime_init(
+            &result->lifetime, storage_destroy_final
+        ) != NUMELYX_CORE_LIFETIME_SUCCESS) {
+        numelyx_core_free(result);
+        return NUMERUS_STORAGE_INVALID_ARGUMENT;
     }
 
     result->kind = kind;
@@ -718,11 +729,9 @@ numelyx_core_storage_status numelyx_core_storage_get(
 }
 
 /** Release the Storage object and all owned representation buffers. */
-void numelyx_core_storage_destroy(numelyx_core_storage *storage)
+static void storage_destroy_final(void *object)
 {
-    if (storage == NULL) {
-        return;
-    }
+    numelyx_core_storage *storage = (numelyx_core_storage *) object;
 
     switch (storage->kind) {
         case NUMERUS_STORAGE_DENSE:
@@ -755,6 +764,25 @@ void numelyx_core_storage_destroy(numelyx_core_storage *storage)
 
     numelyx_core_free(storage);
 }
+
+int numelyx_core_storage_retain(numelyx_core_storage *storage)
+{
+    numelyx_core_lifetime_status status;
+
+    if (storage == NULL) return NUMERUS_STORAGE_INVALID_ARGUMENT;
+    status = numelyx_core_lifetime_retain(&storage->lifetime);
+    if (status == NUMELYX_CORE_LIFETIME_SUCCESS) return NUMERUS_STORAGE_SUCCESS;
+    if (status == NUMELYX_CORE_LIFETIME_OVERFLOW) return NUMERUS_STORAGE_OVERFLOW;
+    return NUMERUS_STORAGE_INVALID_ARGUMENT;
+}
+
+void numelyx_core_storage_destroy(numelyx_core_storage *storage)
+{
+    if (storage != NULL) {
+        (void) numelyx_core_lifetime_release(&storage->lifetime, storage);
+    }
+}
+
 
 /** Return the row count, or zero for NULL. */
 size_t numelyx_core_storage_rows(const numelyx_core_storage *storage)

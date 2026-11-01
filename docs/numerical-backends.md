@@ -11,8 +11,9 @@ vendor-specific routines are confined to the internal numerical layer.
 - CMake must locate BLAS, LAPACK, `cblas.h`, `lapacke.h`, and the LAPACKE
   library, then verify that both C APIs link successfully.
 - Ubuntu development packages: `libopenblas-dev` and `liblapacke-dev`.
-- Windows dependencies are declared in `vcpkg.json` and installed with
-  `vcpkg install --triplet x64-windows`.
+- Windows CI installs the `liblapacke` conda-forge package into an isolated
+  environment and passes its `Library` prefix to CMake. This supplies a
+  consistent BLAS/CBLAS/LAPACK/LAPACKE ABI on Windows.
 - CI exercises both dependency setups.
 
 ## Current dispatch

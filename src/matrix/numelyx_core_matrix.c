@@ -213,6 +213,8 @@ static numelyx_core_matrix_status storage_status_to_matrix_status(int status)
     return NUMERUS_MATRIX_INVALID_ARGUMENT;
 }
 
+static void numelyx_core_matrix_destroy_final(void *object);
+
 int numelyx_core_matrix_allocate(numelyx_core_matrix **matrix)
 {
     if (matrix == NULL) {
@@ -224,9 +226,16 @@ int numelyx_core_matrix_allocate(numelyx_core_matrix **matrix)
         return NUMERUS_MATRIX_OUT_OF_MEMORY;
     }
 
+    if (numelyx_core_lifetime_init(
+            &(*matrix)->lifetime, numelyx_core_matrix_destroy_final
+        ) != NUMELYX_CORE_LIFETIME_SUCCESS) {
+        numelyx_core_matrix_free(*matrix);
+        *matrix = NULL;
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+
     (*matrix)->rows = 0;
     (*matrix)->columns = 0;
-    (*matrix)->reference_count = 1;
     (*matrix)->storage = NULL;
     (*matrix)->parent = NULL;
     (*matrix)->parent2 = NULL;
@@ -1385,36 +1394,31 @@ numelyx_core_matrix_status numelyx_core_matrix_retain(
     numelyx_core_matrix *matrix
 )
 {
-    if (matrix == NULL || matrix->reference_count == 0) {
+    numelyx_core_lifetime_status status;
+
+    if (matrix == NULL) {
         return NUMERUS_MATRIX_INVALID_ARGUMENT;
     }
-    if (matrix->reference_count == SIZE_MAX) {
-        return NUMERUS_MATRIX_OVERFLOW;
-    }
 
-    matrix->reference_count++;
-    return NUMERUS_MATRIX_SUCCESS;
+    status = numelyx_core_lifetime_retain(&matrix->lifetime);
+    switch (status) {
+        case NUMELYX_CORE_LIFETIME_SUCCESS:
+            return NUMERUS_MATRIX_SUCCESS;
+        case NUMELYX_CORE_LIFETIME_OVERFLOW:
+            return NUMERUS_MATRIX_OVERFLOW;
+        default:
+            return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
 }
 
-void numelyx_core_matrix_destroy(numelyx_core_matrix *matrix)
+static void numelyx_core_matrix_destroy_final(void *object)
 {
+    numelyx_core_matrix *matrix = (numelyx_core_matrix *) object;
     numelyx_core_matrix *parent;
     numelyx_core_matrix *parent2;
     numelyx_core_matrix **block_matrices;
     size_t block_count;
     size_t index;
-
-    if (matrix == NULL) {
-        return;
-    }
-
-    if (matrix->reference_count == 0) {
-        return;
-    }
-    matrix->reference_count--;
-    if (matrix->reference_count != 0) {
-        return;
-    }
 
     parent = matrix->parent;
     parent2 = matrix->parent2;
@@ -1438,4 +1442,13 @@ void numelyx_core_matrix_destroy(numelyx_core_matrix *matrix)
         numelyx_core_matrix_destroy(block_matrices[index]);
     }
     numelyx_core_matrix_free(block_matrices);
+}
+
+void numelyx_core_matrix_destroy(numelyx_core_matrix *matrix)
+{
+    if (matrix != NULL) {
+        (void) numelyx_core_lifetime_release(
+            &matrix->lifetime, matrix
+        );
+    }
 }

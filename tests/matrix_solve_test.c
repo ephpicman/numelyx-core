@@ -266,8 +266,77 @@ static void test_solve_overflow_returns_nonfinite(void)
     numelyx_core_matrix_destroy(matrix);
 }
 
+
+static void test_structure_aware_dispatch(void)
+{
+    const double lower_values[] = {2, 0, 3, 1};
+    const double rhs_values[] = {2, 5};
+    const double spd_values[] = {4, 1, 1, 3};
+    const double spd_rhs_values[] = {1, 2};
+    const double near_triangular_values[] = {2, 1e-16, 3, 1};
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = NULL;
+    double value;
+
+    /* Exact triangular structure uses forward substitution, not LU. */
+    assert(numelyx_core_matrix_create_dense(
+        2, 2, lower_values, &matrix
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_create_dense(2, 1, rhs_values, &rhs) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_get(solution, 0, 0, &value) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(fabs(value - 1.0) < 1e-12);
+    assert(numelyx_core_matrix_get(solution, 1, 0, &value) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(fabs(value - 2.0) < 1e-12);
+    numelyx_core_matrix_destroy(solution);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
+
+    /* Symmetric positive-definite structure dispatches through Cholesky. */
+    assert(numelyx_core_matrix_create_dense(
+        2, 2, spd_values, &matrix
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_create_dense(2, 1, spd_rhs_values, &rhs) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert_solution(matrix, solution, rhs);
+    assert(numelyx_core_matrix_get(solution, 0, 0, &value) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(fabs(value - 1.0 / 11.0) < 1e-12);
+    assert(numelyx_core_matrix_get(solution, 1, 0, &value) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(fabs(value - 7.0 / 11.0) < 1e-12);
+    numelyx_core_matrix_destroy(solution);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
+
+    /*
+     * Cached flags use a numerical zero tolerance. A tiny but nonzero
+     * off-triangle entry must fail exact triangular validation and fall back
+     * to the general solver rather than being silently discarded.
+     */
+    assert(numelyx_core_matrix_create_dense(
+        2, 2, near_triangular_values, &matrix
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_create_dense(2, 1, rhs_values, &rhs) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert_solution(matrix, solution, rhs);
+    numelyx_core_matrix_destroy(solution);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
+}
+
 int main(void)
 {
+    test_structure_aware_dispatch();
     test_solve_overflow_returns_nonfinite();
     test_one_by_one_system();
     test_lu_cache_reuse_and_source_lifetime();

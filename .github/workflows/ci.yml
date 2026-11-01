@@ -33,8 +33,7 @@ jobs:
           environment-name: numelyx
           create-args: >-
             -c conda-forge
-            liblapacke
-            blas-devel
+            mkl-devel
       - name: Configure (Ubuntu)
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DNUMELYX_BUILD_TESTS=ON

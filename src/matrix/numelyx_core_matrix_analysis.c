@@ -628,6 +628,10 @@ static numelyx_core_matrix_status matrix_rank_compact_diagonal(
 
     *handled = true;
     size = numelyx_core_matrix_rows(matrix);
+    if (size == 0) {
+        *rank = 0;
+        return NUMERUS_MATRIX_SUCCESS;
+    }
 
     if (kind == NUMERUS_STORAGE_ZERO) {
         *rank = 0;

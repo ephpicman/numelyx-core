@@ -27,7 +27,7 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          vcpkg install lapack-reference[cblas]:x64-windows
+          vcpkg install --triplet x64-windows
       - name: Configure (Ubuntu)
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DNUMELYX_BUILD_TESTS=ON

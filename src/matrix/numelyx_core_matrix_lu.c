@@ -136,15 +136,17 @@ numelyx_core_matrix_status numelyx_core_matrix_lu_factorize(
     for (row = 0; row < size; row++) {
         result->permutation[row] = row;
         for (column = 0; column < size; column++) {
+            double value;
             numelyx_core_matrix_status status = numelyx_core_matrix_get(
-                matrix, row, column,
-                &result->values[row * size + column]
+                matrix, row, column, &value
             );
 
             if (status != NUMERUS_MATRIX_SUCCESS) {
                 numelyx_core_matrix_lu_destroy(result);
                 return status;
             }
+            result->values[row * size + column] = value;
+            if (!isfinite(value)) finite_values = false;
         }
     }
 

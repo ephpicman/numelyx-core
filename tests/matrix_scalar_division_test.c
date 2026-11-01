@@ -8,14 +8,14 @@
  * documentation. This file is test support, not runtime code.
  */
 
-#include "../numerus_matrix.h"
+#include "../numelyx_core_matrix.h"
 
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 
 static int matrix_value_equals(
-    const numerus_matrix *matrix,
+    const numelyx_core_matrix *matrix,
     size_t row,
     size_t column,
     double expected
@@ -23,7 +23,7 @@ static int matrix_value_equals(
 {
     double actual = 0.0;
 
-    return numerus_matrix_get(
+    return numelyx_core_matrix_get(
         matrix, row, column, &actual
     ) == NUMERUS_MATRIX_SUCCESS && actual == expected;
 }
@@ -31,12 +31,12 @@ static int matrix_value_equals(
 static void test_scalar_division_view(void)
 {
     const double values[] = {2.0, -3.0, 0.0, 4.0};
-    numerus_matrix *root = NULL;
-    numerus_matrix *quotient = NULL;
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *quotient = NULL;
 
-    assert(numerus_matrix_create_dense(2, 2, values, &root) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, values, &root) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_divide_scalar(root, 2.0, &quotient) ==
+    assert(numelyx_core_matrix_create_divide_scalar(root, 2.0, &quotient) ==
         NUMERUS_MATRIX_SUCCESS);
 
     assert(matrix_value_equals(quotient, 0, 0, 1.0));
@@ -46,60 +46,60 @@ static void test_scalar_division_view(void)
     assert(matrix_value_equals(root, 0, 0, 2.0));
     assert(matrix_value_equals(root, 0, 1, -3.0));
 
-    numerus_matrix_destroy(quotient);
-    numerus_matrix_destroy(root);
+    numelyx_core_matrix_destroy(quotient);
+    numelyx_core_matrix_destroy(root);
 }
 
 static void test_zero_divisor_and_invalid_arguments(void)
 {
     const double values[] = {1.0, 2.0};
-    numerus_matrix *root = NULL;
-    numerus_matrix *quotient = NULL;
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *quotient = NULL;
 
-    assert(numerus_matrix_create_dense(1, 2, values, &root) ==
+    assert(numelyx_core_matrix_create_dense(1, 2, values, &root) ==
         NUMERUS_MATRIX_SUCCESS);
 
     quotient = root;
-    assert(numerus_matrix_create_divide_scalar(root, 0.0, &quotient) ==
+    assert(numelyx_core_matrix_create_divide_scalar(root, 0.0, &quotient) ==
         NUMERUS_MATRIX_DIVISION_BY_ZERO);
     assert(quotient == NULL);
 
     quotient = root;
-    assert(numerus_matrix_create_divide_scalar(root, -0.0, &quotient) ==
+    assert(numelyx_core_matrix_create_divide_scalar(root, -0.0, &quotient) ==
         NUMERUS_MATRIX_DIVISION_BY_ZERO);
     assert(quotient == NULL);
 
-    assert(numerus_matrix_create_divide_scalar(NULL, 2.0, &quotient) ==
+    assert(numelyx_core_matrix_create_divide_scalar(NULL, 2.0, &quotient) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(quotient == NULL);
-    assert(numerus_matrix_create_divide_scalar(root, 2.0, NULL) ==
+    assert(numelyx_core_matrix_create_divide_scalar(root, 2.0, NULL) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
 
-    numerus_matrix_destroy(root);
+    numelyx_core_matrix_destroy(root);
 }
 
 static void test_non_finite_values(void)
 {
     const double values[] = {INFINITY, NAN, 1.0};
-    numerus_matrix *root = NULL;
-    numerus_matrix *quotient = NULL;
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *quotient = NULL;
     double value = 0.0;
 
-    assert(numerus_matrix_create_dense(1, 3, values, &root) ==
+    assert(numelyx_core_matrix_create_dense(1, 3, values, &root) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_divide_scalar(root, 2.0, &quotient) ==
+    assert(numelyx_core_matrix_create_divide_scalar(root, 2.0, &quotient) ==
         NUMERUS_MATRIX_SUCCESS);
 
-    assert(numerus_matrix_get(quotient, 0, 0, &value) ==
+    assert(numelyx_core_matrix_get(quotient, 0, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(isinf(value) && value > 0.0);
-    assert(numerus_matrix_get(quotient, 0, 1, &value) ==
+    assert(numelyx_core_matrix_get(quotient, 0, 1, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(isnan(value));
     assert(matrix_value_equals(quotient, 0, 2, 0.5));
 
-    numerus_matrix_destroy(quotient);
-    numerus_matrix_destroy(root);
+    numelyx_core_matrix_destroy(quotient);
+    numelyx_core_matrix_destroy(root);
 }
 
 int main(void)

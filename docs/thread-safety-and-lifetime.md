@@ -21,7 +21,9 @@ A retain operation requires the caller to already hold a valid reference (or
 another external guarantee that prevents reclamation). Atomic reference
 counting does not make it valid to retain a stale pointer, and it does not
 protect an object from a concurrent final release when the caller owns no
-reference.
+reference. Pointer publication must also use a synchronization mechanism that
+makes the fully initialized object visible to the receiving thread; retain is
+not a substitute for publishing or queue synchronization.
 
 The final release invokes the object's destructor exactly once. Destructors
 release the references they own to dependencies. Borrowed pointers and

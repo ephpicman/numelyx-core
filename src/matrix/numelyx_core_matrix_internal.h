@@ -7,6 +7,7 @@
 
 #include "numelyx_core_matrix.h"
 #include "numelyx_core_matrix_lu.h"
+#include "numelyx_core_lifetime.h"
 
 typedef enum {
     NUMERUS_MATRIX_SELECTION_NONE = 0,
@@ -159,7 +160,7 @@ int numelyx_core_matrix_create_slice_view(
 struct numelyx_core_matrix {
     size_t rows;
     size_t columns;
-    size_t reference_count;
+    numelyx_core_lifetime lifetime;
     numelyx_core_storage *storage;
     numelyx_core_matrix *parent;
     numelyx_core_matrix *parent2;

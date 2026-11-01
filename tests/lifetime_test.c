@@ -1,6 +1,7 @@
 #include "numelyx_core_lifetime.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <stdatomic.h>
 #include <stddef.h>
 #include "test_threads.h"

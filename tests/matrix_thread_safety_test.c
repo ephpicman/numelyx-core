@@ -1,8 +1,8 @@
 #include "../numelyx_core_matrix.h"
 
 #include <assert.h>
-#include <stdbool.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdatomic.h>
 #include "test_threads.h"
 
@@ -12,6 +12,49 @@ typedef struct {
     atomic_bool *start;
     int failed;
 } worker_args;
+
+static numelyx_core_matrix *create_transpose_chain(
+    numelyx_core_matrix *root,
+    size_t depth
+)
+{
+    numelyx_core_matrix *current = root;
+    size_t level;
+
+    for (level = 0; level < depth; level++) {
+        numelyx_core_matrix *next = NULL;
+        if (numelyx_core_matrix_create_transpose(current, &next) !=
+                NUMERUS_MATRIX_SUCCESS) {
+            numelyx_core_matrix_destroy(current);
+            return NULL;
+        }
+        numelyx_core_matrix_destroy(current);
+        current = next;
+    }
+
+    return current;
+}
+
+static void stress_deep_view_creation_and_destruction(void)
+{
+    const double values[] = {
+        4.0, 1.0, 0.0,
+        1.0, 3.0, 1.0,
+        0.0, 1.0, 2.0
+    };
+    size_t iteration;
+
+    for (iteration = 0; iteration < 200; iteration++) {
+        numelyx_core_matrix *root = NULL;
+        numelyx_core_matrix *chain;
+
+        assert(numelyx_core_matrix_create_dense(3, 3, values, &root) ==
+            NUMERUS_MATRIX_SUCCESS);
+        chain = create_transpose_chain(root, 48);
+        assert(chain != NULL);
+        numelyx_core_matrix_destroy(chain);
+    }
+}
 
 static int cache_worker(void *argument)
 {
@@ -57,18 +100,23 @@ int main(void)
         1.0, 3.0, 1.0,
         0.0, 1.0, 2.0
     };
-    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *matrix;
     worker_args arguments[THREAD_COUNT];
     test_thread_t threads[THREAD_COUNT];
     atomic_size_t ready;
     atomic_bool start;
     size_t index;
 
+    stress_deep_view_creation_and_destruction();
+
     atomic_init(&ready, 0);
     atomic_init(&start, false);
 
-    assert(numelyx_core_matrix_create_dense(3, 3, values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 3, values, &root) ==
         NUMERUS_MATRIX_SUCCESS);
+    matrix = create_transpose_chain(root, 32);
+    assert(matrix != NULL);
 
     for (index = 0; index < THREAD_COUNT; index++) {
         arguments[index].matrix = matrix;

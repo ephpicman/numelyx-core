@@ -19,6 +19,9 @@ file(GLOB_RECURSE NUMELYX_CORE_SOURCES CONFIGURE_DEPENDS
 add_library(numelyx_core STATIC ${NUMELYX_CORE_SOURCES})
 add_library(Numelyx::Core ALIAS numelyx_core)
 
+find_package(Threads REQUIRED)
+target_link_libraries(numelyx_core PUBLIC Threads::Threads)
+
 target_include_directories(numelyx_core
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -35,7 +38,6 @@ endif()
 
 if(NUMELYX_BUILD_TESTS)
     enable_testing()
-    find_package(Threads REQUIRED)
     file(GLOB NUMELYX_TEST_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/*_test.c"
     )

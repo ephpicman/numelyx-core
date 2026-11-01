@@ -8,20 +8,20 @@
  * documentation. This file is test support, not runtime code.
  */
 
-#include "../numerus_matrix.h"
+#include "../numelyx_core_matrix.h"
 
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 
 static void assert_solution(
-    const numerus_matrix *matrix,
-    const numerus_matrix *solution,
-    const numerus_matrix *right_hand_side
+    const numelyx_core_matrix *matrix,
+    const numelyx_core_matrix *solution,
+    const numelyx_core_matrix *right_hand_side
 )
 {
-    size_t rows = numerus_matrix_rows(matrix);
-    size_t columns = numerus_matrix_columns(right_hand_side);
+    size_t rows = numelyx_core_matrix_rows(matrix);
+    size_t columns = numelyx_core_matrix_columns(right_hand_side);
     size_t row;
     size_t column;
 
@@ -34,13 +34,13 @@ static void assert_solution(
             for (k = 0; k < rows; k++) {
                 double left;
                 double right;
-                assert(numerus_matrix_get(matrix, row, k, &left) ==
+                assert(numelyx_core_matrix_get(matrix, row, k, &left) ==
                     NUMERUS_MATRIX_SUCCESS);
-                assert(numerus_matrix_get(solution, k, column, &right) ==
+                assert(numelyx_core_matrix_get(solution, k, column, &right) ==
                     NUMERUS_MATRIX_SUCCESS);
                 value += left * right;
             }
-            assert(numerus_matrix_get(
+            assert(numelyx_core_matrix_get(
                 right_hand_side, row, column, &expected
             ) == NUMERUS_MATRIX_SUCCESS);
             assert(fabs(value - expected) < 1e-9);
@@ -52,35 +52,35 @@ static void test_multiple_right_hand_sides(void)
 {
     const double matrix_values[] = {3, 1, 1, 2};
     const double rhs_values[] = {9, 4, 8, 3};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *solution = NULL;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = NULL;
     double value;
 
-    assert(numerus_matrix_create_dense(2, 2, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(2, 2, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_solve(matrix, rhs, &solution) ==
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
         NUMERUS_MATRIX_SUCCESS);
 
-    assert(numerus_matrix_get(solution, 0, 0, &value) ==
+    assert(numelyx_core_matrix_get(solution, 0, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 2.0) < 1e-12);
-    assert(numerus_matrix_get(solution, 1, 0, &value) ==
+    assert(numelyx_core_matrix_get(solution, 1, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 3.0) < 1e-12);
-    assert(numerus_matrix_get(solution, 0, 1, &value) ==
+    assert(numelyx_core_matrix_get(solution, 0, 1, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 1.0) < 1e-12);
-    assert(numerus_matrix_get(solution, 1, 1, &value) ==
+    assert(numelyx_core_matrix_get(solution, 1, 1, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 1.0) < 1e-12);
 
     assert_solution(matrix, solution, rhs);
-    numerus_matrix_destroy(solution);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(solution);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_row_pivoting_and_errors(void)
@@ -90,54 +90,54 @@ static void test_row_pivoting_and_errors(void)
     const double singular_values[] = {1, 2, 2, 4};
     const double mismatched_values[] = {1, 2, 3};
     const double nan_rhs_values[] = {NAN, 1};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *solution = (void *) 1;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = (void *) 1;
     double value;
 
-    assert(numerus_matrix_create_dense(2, 2, pivot_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, pivot_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(2, 2, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_solve(matrix, rhs, &solution) ==
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_get(solution, 0, 0, &value) ==
+    assert(numelyx_core_matrix_get(solution, 0, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(value == 3.0);
-    assert(numerus_matrix_get(solution, 1, 1, &value) ==
+    assert(numelyx_core_matrix_get(solution, 1, 1, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(value == 4.0);
     assert_solution(matrix, solution, rhs);
-    numerus_matrix_destroy(solution);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(solution);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(2, 2, singular_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, singular_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(2, 2, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_solve(matrix, rhs, &solution) ==
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
         NUMERUS_MATRIX_SINGULAR);
     assert(solution == NULL);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(2, 2, pivot_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, pivot_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(3, 1, mismatched_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(3, 1, mismatched_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_solve(matrix, rhs, &solution) ==
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
         NUMERUS_MATRIX_DIMENSION_MISMATCH);
     assert(solution == NULL);
-    numerus_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(rhs);
 
-    assert(numerus_matrix_create_dense(2, 1, nan_rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(2, 1, nan_rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_solve(matrix, rhs, &solution) ==
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
         NUMERUS_MATRIX_NON_FINITE);
     assert(solution == NULL);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 
@@ -145,40 +145,40 @@ static void test_lu_cache_reuse_and_source_lifetime(void)
 {
     const double matrix_values[] = {4, 1, 2, 3};
     const double rhs_values[] = {1, 2};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *first = NULL;
-    numerus_matrix *second = NULL;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *first = NULL;
+    numelyx_core_matrix *second = NULL;
     double a, b;
 
-    assert(numerus_matrix_create_dense(2, 2, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(2, 1, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(2, 1, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
 
     /* Determinant, solve and inverse share the source's retained LU factors. */
     {
         double determinant;
-        assert(numerus_matrix_determinant(matrix, &determinant) ==
+        assert(numelyx_core_matrix_determinant(matrix, &determinant) ==
             NUMERUS_MATRIX_SUCCESS);
         assert(fabs(determinant - 10.0) < 1e-12);
     }
-    assert(numerus_matrix_solve(matrix, rhs, &first) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_inverse(matrix, &second) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_get(first, 0, 0, &a) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_get(first, 1, 0, &b) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_solve(matrix, rhs, &first) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_inverse(matrix, &second) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_get(first, 0, 0, &a) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_get(first, 1, 0, &b) == NUMERUS_MATRIX_SUCCESS);
     assert(fabs(a - 0.1) < 1e-12);
     assert(fabs(b - 0.6) < 1e-12);
 
-    numerus_matrix_destroy(matrix);
-    assert(numerus_matrix_get(first, 0, 0, &a) == NUMERUS_MATRIX_SUCCESS);
+    numelyx_core_matrix_destroy(matrix);
+    assert(numelyx_core_matrix_get(first, 0, 0, &a) == NUMERUS_MATRIX_SUCCESS);
     assert(fabs(a - 0.1) < 1e-12);
-    assert(numerus_matrix_get(second, 0, 0, &a) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_get(second, 0, 0, &a) == NUMERUS_MATRIX_SUCCESS);
     assert(fabs(a - 0.3) < 1e-12);
 
-    numerus_matrix_destroy(first);
-    numerus_matrix_destroy(second);
-    numerus_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(first);
+    numelyx_core_matrix_destroy(second);
+    numelyx_core_matrix_destroy(rhs);
 }
 
 static void test_nonfinite_coefficients_and_nonsquare_input(void)
@@ -186,32 +186,32 @@ static void test_nonfinite_coefficients_and_nonsquare_input(void)
     const double rectangular_values[] = {1, 2, 3, 4, 5, 6};
     const double nonfinite_values[] = {1, NAN, 0, 1};
     const double rhs_values[] = {1, 2};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *solution = (void *) 1;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = (void *) 1;
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         2, 3, rectangular_values, &matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(2, 1, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(2, 1, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_solve(matrix, rhs, &solution) ==
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
         NUMERUS_MATRIX_NOT_SQUARE);
     assert(solution == NULL);
-    numerus_matrix_destroy(matrix);
-    numerus_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(rhs);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         2, 2, nonfinite_values, &matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(2, 1, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(2, 1, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
     solution = (void *) 1;
-    assert(numerus_matrix_solve(matrix, rhs, &solution) ==
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
         NUMERUS_MATRIX_NON_FINITE);
     assert(solution == NULL);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 
@@ -219,31 +219,31 @@ static void test_one_by_one_system(void)
 {
     const double matrix_values[] = {4.0};
     const double rhs_values[] = {10.0, -6.0};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *solution = NULL;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = NULL;
     double value;
 
-    assert(numerus_matrix_create_dense(1, 1, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(1, 1, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(1, 2, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(1, 2, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_solve(matrix, rhs, &solution) ==
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_rows(solution) == 1);
-    assert(numerus_matrix_columns(solution) == 2);
+    assert(numelyx_core_matrix_rows(solution) == 1);
+    assert(numelyx_core_matrix_columns(solution) == 2);
 
-    assert(numerus_matrix_get(solution, 0, 0, &value) ==
+    assert(numelyx_core_matrix_get(solution, 0, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 2.5) < 1e-12);
-    assert(numerus_matrix_get(solution, 0, 1, &value) ==
+    assert(numelyx_core_matrix_get(solution, 0, 1, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value + 1.5) < 1e-12);
     assert_solution(matrix, solution, rhs);
 
-    numerus_matrix_destroy(solution);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(solution);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 
@@ -251,19 +251,19 @@ static void test_solve_overflow_returns_nonfinite(void)
 {
     const double matrix_values[] = {1e-320};
     const double rhs_values[] = {1.0};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *solution = (void *) 1;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = (void *) 1;
 
-    assert(numerus_matrix_create_dense(1, 1, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(1, 1, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(1, 1, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(1, 1, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_solve(matrix, rhs, &solution) ==
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
         NUMERUS_MATRIX_NON_FINITE);
     assert(solution == NULL);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 int main(void)

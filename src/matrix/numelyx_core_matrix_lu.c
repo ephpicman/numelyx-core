@@ -85,6 +85,7 @@ numelyx_core_matrix_status numelyx_core_matrix_lu_factorize(
     size_t row;
     size_t column;
     bool finite_values = true;
+    bool use_native;
 
     if (factorization == NULL) {
         return NUMERUS_MATRIX_INVALID_ARGUMENT;
@@ -150,7 +151,8 @@ numelyx_core_matrix_status numelyx_core_matrix_lu_factorize(
         }
     }
 
-    if (finite_values && size <= (size_t) INT_MAX) {
+    use_native = !finite_values || size > (size_t) INT_MAX;
+    if (!use_native) {
         size_t pivot_bytes;
         lapack_int *pivots;
         lapack_int info;
@@ -185,29 +187,59 @@ numelyx_core_matrix_status numelyx_core_matrix_lu_factorize(
             return NUMERUS_MATRIX_INVALID_ARGUMENT;
         }
 
-        for (row = 0; row < size; row++) {
-            lapack_int pivot = pivots[row];
-            if (pivot < 1 || (size_t) pivot > size) {
-                matrix_lu_free(pivots);
-                numelyx_core_matrix_lu_destroy(result);
-                return NUMERUS_MATRIX_INVALID_ARGUMENT;
-            }
-            if ((size_t) pivot - 1 != row) {
-                size_t temporary = result->permutation[row];
-                result->permutation[row] = result->permutation[(size_t) pivot - 1];
-                result->permutation[(size_t) pivot - 1] = temporary;
-                result->permutation_sign = -result->permutation_sign;
-            }
-            if (result->values[row * size + row] != 0.0) {
-                result->rank++;
-            }
-        }
-
-        matrix_lu_free(pivots);
-    } else {
         /*
-         * Preserve the reference path for non-finite data and dimensions that
-         * exceed LAPACK's conservative 32-bit call boundary.
+         * LAPACK stops pivoting below an exact zero diagonal. The established
+         * Numerus rank contract continues searching later columns, so singular
+         * inputs return to the native reference factorizer.
+         */
+        if (info > 0) {
+            matrix_lu_free(pivots);
+            for (row = 0; row < size; row++) {
+                result->permutation[row] = row;
+                for (column = 0; column < size; column++) {
+                    numelyx_core_matrix_status read_status =
+                        numelyx_core_matrix_get(
+                            matrix, row, column,
+                            &result->values[row * size + column]
+                        );
+                    if (read_status != NUMERUS_MATRIX_SUCCESS) {
+                        numelyx_core_matrix_lu_destroy(result);
+                        return read_status;
+                    }
+                }
+            }
+            result->rank = 0;
+            result->permutation_sign = 1;
+            use_native = true;
+        } else {
+            for (row = 0; row < size; row++) {
+                lapack_int pivot = pivots[row];
+                if (pivot < (lapack_int) row + 1 ||
+                    (size_t) pivot > size) {
+                    matrix_lu_free(pivots);
+                    numelyx_core_matrix_lu_destroy(result);
+                    return NUMERUS_MATRIX_INVALID_ARGUMENT;
+                }
+                if ((size_t) pivot - 1 != row) {
+                    size_t temporary = result->permutation[row];
+                    result->permutation[row] =
+                        result->permutation[(size_t) pivot - 1];
+                    result->permutation[(size_t) pivot - 1] = temporary;
+                    result->permutation_sign = -result->permutation_sign;
+                }
+                if (result->values[row * size + row] != 0.0) {
+                    result->rank++;
+                }
+            }
+            matrix_lu_free(pivots);
+        }
+    }
+
+    if (use_native) {
+        /*
+         * Preserve the reference path for non-finite data, singular matrices
+         * whose later columns still contain pivots, and dimensions beyond
+         * LAPACK's conservative 32-bit call boundary.
          */
         for (column = 0; column < size; column++) {
             size_t pivot_row = column;

@@ -3,7 +3,7 @@
  * @brief Fault-injection tests for Storage constructors and owned-buffer cleanup.
  */
 
-#include "../src/storage/numerus_storage.h"
+#include "../src/storage/numelyx_core_storage.h"
 
 #include <assert.h>
 #include <stddef.h>
@@ -52,20 +52,20 @@ static void test_dense_storage_allocation_failures(void)
     int success_observed = 0;
 
     for (fail_after = 0; fail_after < 8; fail_after++) {
-        numerus_storage *storage = (numerus_storage *) 1;
+        numelyx_core_storage *storage = (numelyx_core_storage *) 1;
         int status;
 
         allocations_before_failure = fail_after;
-        status = numerus_storage_create_dense(2, 2, values, &storage);
+        status = numelyx_core_storage_create_dense(2, 2, values, &storage);
 
         if (status == NUMERUS_STORAGE_SUCCESS) {
             double value;
 
             assert(storage != NULL);
-            assert(numerus_storage_get(storage, 1, 1, &value) ==
+            assert(numelyx_core_storage_get(storage, 1, 1, &value) ==
                 NUMERUS_STORAGE_SUCCESS);
             assert(value == 4.0);
-            numerus_storage_destroy(storage);
+            numelyx_core_storage_destroy(storage);
             success_observed = 1;
             break;
         }
@@ -82,7 +82,7 @@ static void test_dense_storage_allocation_failures(void)
 
 static void test_sparse_storage_allocation_failures(void)
 {
-    const numerus_storage_sparse_entry entries[] = {
+    const numelyx_core_storage_sparse_entry entries[] = {
         {3, 30.0},
         {0, 10.0}
     };
@@ -91,11 +91,11 @@ static void test_sparse_storage_allocation_failures(void)
     int success_observed = 0;
 
     for (fail_after = 0; fail_after < 8; fail_after++) {
-        numerus_storage *storage = (numerus_storage *) 1;
+        numelyx_core_storage *storage = (numelyx_core_storage *) 1;
         int status;
 
         allocations_before_failure = fail_after;
-        status = numerus_storage_create_sparse(
+        status = numelyx_core_storage_create_sparse(
             2, 2, -1.0, entries, 2, &storage
         );
 
@@ -103,16 +103,16 @@ static void test_sparse_storage_allocation_failures(void)
             double value;
 
             assert(storage != NULL);
-            assert(numerus_storage_get(storage, 0, 0, &value) ==
+            assert(numelyx_core_storage_get(storage, 0, 0, &value) ==
                 NUMERUS_STORAGE_SUCCESS);
             assert(value == 10.0);
-            assert(numerus_storage_get(storage, 1, 1, &value) ==
+            assert(numelyx_core_storage_get(storage, 1, 1, &value) ==
                 NUMERUS_STORAGE_SUCCESS);
             assert(value == 30.0);
-            assert(numerus_storage_get(storage, 0, 1, &value) ==
+            assert(numelyx_core_storage_get(storage, 0, 1, &value) ==
                 NUMERUS_STORAGE_SUCCESS);
             assert(value == -1.0);
-            numerus_storage_destroy(storage);
+            numelyx_core_storage_destroy(storage);
             success_observed = 1;
             break;
         }

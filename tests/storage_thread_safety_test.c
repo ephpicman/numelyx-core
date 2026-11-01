@@ -2,7 +2,7 @@
 
 #include <assert.h>
 #include <stddef.h>
-#include <threads.h>
+#include "test_threads.h"
 
 typedef struct {
     numelyx_core_storage *storage;
@@ -35,7 +35,7 @@ int main(void)
     const double values[] = {0,1,2,3,4,5,6,7,8};
     numelyx_core_storage *storage = NULL;
     storage_worker_args arguments[THREAD_COUNT];
-    thrd_t threads[THREAD_COUNT];
+    test_thread_t threads[THREAD_COUNT];
     size_t index;
 
     assert(numelyx_core_storage_create_dense(3, 3, values, &storage) ==
@@ -45,12 +45,11 @@ int main(void)
         arguments[index].storage = storage;
         arguments[index].failed = 0;
         assert(numelyx_core_storage_retain(storage) == NUMERUS_STORAGE_SUCCESS);
-        assert(thrd_create(&threads[index], storage_worker, &arguments[index]) ==
-            thrd_success);
+        assert(test_thread_create(&threads[index], storage_worker, &arguments[index]));
     }
     for (index = 0; index < THREAD_COUNT; index++) {
         int result = -1;
-        assert(thrd_join(threads[index], &result) == thrd_success);
+        assert(test_thread_join(&threads[index], &result));
         assert(result == 0);
         assert(arguments[index].failed == 0);
     }

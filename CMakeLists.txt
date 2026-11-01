@@ -1,0 +1,85 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(NumelyxCore VERSION 0.1.0 LANGUAGES C)
+
+option(NUMELYX_BUILD_TESTS "Build native C tests" ON)
+option(NUMELYX_BUILD_BENCHMARKS "Build diagnostic benchmarks" OFF)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_C_EXTENSIONS OFF)
+
+file(GLOB_RECURSE NUMELYX_CORE_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/core/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/storage/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/matrix/*.c"
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/statistics/*.c"
+)
+
+add_library(numelyx_core STATIC ${NUMELYX_CORE_SOURCES})
+add_library(Numelyx::Core ALIAS numelyx_core)
+
+target_include_directories(numelyx_core
+    PUBLIC
+        "${CMAKE_CURRENT_SOURCE_DIR}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/core"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/storage"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/matrix"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/statistics"
+)
+
+# Standalone mode deliberately uses the C runtime allocator, not Zend MM.
+target_compile_definitions(numelyx_core PRIVATE
+    NUMERUS_STORAGE_USE_LIBC_ALLOC
+    NUMERUS_MATRIX_USE_LIBC_ALLOC
+    NUMERUS_RNG_USE_LIBC_ALLOC
+    NUMERUS_PROBABILITY_USE_LIBC_ALLOC
+    NUMERUS_OPTIMIZER_USE_LIBC_ALLOC
+)
+
+if(UNIX)
+    target_link_libraries(numelyx_core PUBLIC m)
+endif()
+
+if(NUMELYX_BUILD_TESTS)
+    enable_testing()
+    file(GLOB NUMELYX_TEST_SOURCES CONFIGURE_DEPENDS
+        "${CMAKE_CURRENT_SOURCE_DIR}/tests/*_test.c"
+    )
+
+    foreach(test_source IN LISTS NUMELYX_TEST_SOURCES)
+        get_filename_component(test_name "${test_source}" NAME_WE)
+
+        # These tests inject allocation failures via GNU ld --wrap.
+        if(test_name MATCHES "^(matrix|storage)_allocation_failure_test$"
+           AND NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND UNIX AND NOT APPLE))
+            message(STATUS "Skipping ${test_name}: GNU ld --wrap is required")
+            continue()
+        endif()
+
+        add_executable(${test_name} "${test_source}")
+        target_link_libraries(${test_name} PRIVATE Numelyx::Core)
+
+        if(test_name MATCHES "^(matrix|storage)_allocation_failure_test$")
+            target_link_options(${test_name} PRIVATE
+                "-Wl,--wrap=malloc"
+                "-Wl,--wrap=calloc"
+                "-Wl,--wrap=free"
+            )
+        endif()
+
+        add_test(NAME ${test_name} COMMAND ${test_name})
+    endforeach()
+endif()
+
+if(NUMELYX_BUILD_BENCHMARKS)
+    add_executable(matrix_benchmark benchmarks/matrix_benchmark.c)
+    target_link_libraries(matrix_benchmark PRIVATE Numelyx::Core)
+    if(CMAKE_C_COMPILER_ID STREQUAL "GNU" AND UNIX AND NOT APPLE)
+        target_link_options(matrix_benchmark PRIVATE
+            "-Wl,--wrap=malloc"
+            "-Wl,--wrap=calloc"
+            "-Wl,--wrap=free"
+        )
+    endif()
+endif()

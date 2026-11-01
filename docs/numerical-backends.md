@@ -23,6 +23,7 @@ vendor-specific routines are confined to the internal numerical layer.
 | Unpivoted reduced QR | LAPACKE `LAPACKE_dgeqrf` + `LAPACKE_dorgqr` (row-major) |
 | Reduced SVD | LAPACKE `LAPACKE_dgesdd` (row-major); one-sided Jacobi remains the non-convergence fallback |
 | Symmetric eigen decomposition | LAPACKE `LAPACKE_dsyevd` (row-major); cyclic Jacobi remains the non-convergence fallback |
+| Triangular solve | LAPACKE `LAPACKE_dtrtrs` (row-major), after exact structural validation |
 | Identity, zero, and sparse multiplication shortcuts | Existing Numelyx Core fast paths |
 | Non-finite LU inputs or dimensions beyond the conservative 32-bit LAPACK boundary | Existing native LU path |
 | Pivoted QR (rank-revealing) | Existing native implementation; its permutation/rank contract remains separate |
@@ -51,8 +52,7 @@ CBLAS/LAPACKE integer dimensions are range-checked before conversion.
 ## Remaining migration
 
 The integration currently dispatches GEMM, LU, Cholesky, and unpivoted QR.
-Pivoted QR and triangular solves remain on their existing native
-implementations until each routine has an adapter, status mapping, regression
-coverage, and differential tests. Sparse and structured Storage fast paths
+Pivoted QR remains on its existing native implementation because its
+rank-revealing permutation contract is separate from unpivoted QR. Sparse and structured Storage fast paths
 remain Numelyx Core responsibilities; a general sparse solver dependency is
 not introduced by this change.

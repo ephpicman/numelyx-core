@@ -192,6 +192,8 @@ static void test_materialize_rectangular_and_degenerate_view_shapes(void)
     assert(numelyx_core_matrix_create_slice(
         root, 1, 1, 0, 3, &row_view
     ) == NUMERUS_MATRIX_SUCCESS);
+    numelyx_core_matrix_destroy(materialized);
+    materialized = NULL;
     assert(numelyx_core_matrix_materialize(row_view, &materialized) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(numelyx_core_matrix_rows(materialized) == 1);

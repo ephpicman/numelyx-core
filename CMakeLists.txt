@@ -40,19 +40,14 @@ if(NUMELYX_BUILD_TESTS)
     )
 
     set(NUMELYX_ALLOC_WRAP_TESTS
-        gaussian_log_density_test
-        gaussian_sampling_test
         matrix_allocation_failure_test
-        optimizer_test
-        rng_sampling_test
-        rng_state_test
         storage_allocation_failure_test
     )
 
     foreach(test_source IN LISTS NUMELYX_TEST_SOURCES)
         get_filename_component(test_name "${test_source}" NAME_WE)
 
-        # These tests inject allocation failures via GNU ld --wrap.
+        # Matrix and Storage allocation injection uses GNU ld --wrap.
         if(test_name IN_LIST NUMELYX_ALLOC_WRAP_TESTS
            AND NOT (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND UNIX AND NOT APPLE))
             message(STATUS "Skipping ${test_name}: GNU ld --wrap is required")
@@ -68,6 +63,18 @@ if(NUMELYX_BUILD_TESTS)
                 "-Wl,--wrap=calloc"
                 "-Wl,--wrap=free"
             )
+        elseif(test_name MATCHES "^(gaussian_log_density_test|gaussian_sampling_test)$")
+            target_sources(${test_name} PRIVATE src/statistics/numerus_probability.c)
+            target_compile_definitions(${test_name} PRIVATE NUMERUS_PROBABILITY_TEST_ALLOCATOR)
+        elseif(test_name STREQUAL "optimizer_test")
+            target_sources(${test_name} PRIVATE src/statistics/numerus_optimizer.c)
+            target_compile_definitions(${test_name} PRIVATE NUMERUS_OPTIMIZER_TEST_ALLOCATOR)
+        elseif(test_name MATCHES "^(rng_sampling_test|rng_state_test)$")
+            target_sources(${test_name} PRIVATE
+                src/statistics/numerus_rng.c
+                src/statistics/numerus_rng_sampling.c
+            )
+            target_compile_definitions(${test_name} PRIVATE NUMERUS_RNG_TEST_ALLOCATOR)
         endif()
 
         add_test(NAME ${test_name} COMMAND ${test_name})

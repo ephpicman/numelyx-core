@@ -5,11 +5,11 @@
  * @details This standalone program demonstrates how to call the statistical foundation's native C APIs. It is illustrative executable code, not part of the extension runtime or a compatibility forwarding header.
  */
 
-#include "../src/matrix/numerus_matrix.h"
-#include "../src/core/numerus_numeric.h"
-#include "../src/statistics/numerus_optimizer.h"
-#include "../src/statistics/numerus_probability.h"
-#include "../src/statistics/numerus_rng.h"
+#include "../src/matrix/numelyx_core_matrix.h"
+#include "../src/core/numelyx_core_numeric.h"
+#include "../src/statistics/numelyx_core_optimizer.h"
+#include "../src/statistics/numelyx_core_probability.h"
+#include "../src/statistics/numelyx_core_rng.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -76,62 +76,62 @@ int main(void)
     double parameter_1;
     double sample_x;
     double sample_y;
-    numerus_optimizer_options options;
-    numerus_optimizer_result *optimization = NULL;
-    numerus_optimizer_termination termination;
-    numerus_matrix *observation = NULL;
-    numerus_matrix *mean = NULL;
-    numerus_matrix *covariance = NULL;
-    numerus_matrix *sample = NULL;
-    numerus_rng *rng = NULL;
+    numelyx_core_optimizer_options options;
+    numelyx_core_optimizer_result *optimization = NULL;
+    numelyx_core_optimizer_termination termination;
+    numelyx_core_matrix *observation = NULL;
+    numelyx_core_matrix *mean = NULL;
+    numelyx_core_matrix *covariance = NULL;
+    numelyx_core_matrix *sample = NULL;
+    numelyx_core_rng *rng = NULL;
     size_t *indices = NULL;
     int result = 1;
 
-    if (numerus_numeric_sigmoid(0.5, &sigmoid) != NUMERUS_NUMERIC_SUCCESS) {
+    if (numelyx_core_numeric_sigmoid(0.5, &sigmoid) != NUMERUS_NUMERIC_SUCCESS) {
         return fail("sigmoid", NUMERUS_NUMERIC_NUMERICAL_FAILURE);
     }
 
-    if (numerus_matrix_create_dense(
+    if (numelyx_core_matrix_create_dense(
             2, 1, observation_values, &observation
         ) != NUMERUS_MATRIX_SUCCESS ||
-        numerus_matrix_create_dense(2, 1, mean_values, &mean) !=
+        numelyx_core_matrix_create_dense(2, 1, mean_values, &mean) !=
             NUMERUS_MATRIX_SUCCESS ||
-        numerus_matrix_create_dense(2, 2, covariance_values, &covariance) !=
+        numelyx_core_matrix_create_dense(2, 2, covariance_values, &covariance) !=
             NUMERUS_MATRIX_SUCCESS) {
         (void) fail("Matrix construction", NUMERUS_MATRIX_OUT_OF_MEMORY);
         goto cleanup;
     }
 
-    if (numerus_multivariate_gaussian_log_density(
+    if (numelyx_core_multivariate_gaussian_log_density(
             observation, mean, covariance, &log_density
         ) != NUMERUS_PROBABILITY_SUCCESS) {
         (void) fail("Gaussian log density", NUMERUS_PROBABILITY_NUMERICAL_FAILURE);
         goto cleanup;
     }
 
-    if (numerus_rng_create(UINT64_C(20261010), UINT64_C(17), &rng) !=
+    if (numelyx_core_rng_create(UINT64_C(20261010), UINT64_C(17), &rng) !=
         NUMERUS_RNG_SUCCESS) {
         (void) fail("RNG construction", NUMERUS_RNG_OUT_OF_MEMORY);
         goto cleanup;
     }
 
-    if (numerus_multivariate_gaussian_sample(
+    if (numelyx_core_multivariate_gaussian_sample(
             mean, covariance, rng, &sample
         ) != NUMERUS_PROBABILITY_SUCCESS) {
         (void) fail("Gaussian sampling", NUMERUS_PROBABILITY_NUMERICAL_FAILURE);
         goto cleanup;
     }
 
-    if (numerus_rng_sample_indices(
+    if (numelyx_core_rng_sample_indices(
             rng, 100, 8, false, &indices
         ) != NUMERUS_RNG_SUCCESS) {
         (void) fail("Index sampling", NUMERUS_RNG_NUMERICAL_FAILURE);
         goto cleanup;
     }
 
-    if (numerus_optimizer_default_options(&options) !=
+    if (numelyx_core_optimizer_default_options(&options) !=
         NUMERUS_OPTIMIZER_SUCCESS ||
-        numerus_optimizer_minimize(
+        numelyx_core_optimizer_minimize(
             quadratic_objective,
             quadratic_gradient,
             target,
@@ -144,13 +144,13 @@ int main(void)
         goto cleanup;
     }
 
-    if (numerus_optimizer_result_get_parameter(
+    if (numelyx_core_optimizer_result_get_parameter(
             optimization, 0, &parameter_0
         ) != NUMERUS_OPTIMIZER_SUCCESS ||
-        numerus_optimizer_result_get_parameter(
+        numelyx_core_optimizer_result_get_parameter(
             optimization, 1, &parameter_1
         ) != NUMERUS_OPTIMIZER_SUCCESS ||
-        numerus_optimizer_result_get_termination(
+        numelyx_core_optimizer_result_get_termination(
             optimization, &termination
         ) != NUMERUS_OPTIMIZER_SUCCESS ||
         termination != NUMERUS_OPTIMIZER_CONVERGED_GRADIENT ||
@@ -160,9 +160,9 @@ int main(void)
         goto cleanup;
     }
 
-    if (numerus_matrix_get(sample, 0, 0, &sample_x) !=
+    if (numelyx_core_matrix_get(sample, 0, 0, &sample_x) !=
             NUMERUS_MATRIX_SUCCESS ||
-        numerus_matrix_get(sample, 1, 0, &sample_y) !=
+        numelyx_core_matrix_get(sample, 1, 0, &sample_y) !=
             NUMERUS_MATRIX_SUCCESS) {
         (void) fail("Sample access", NUMERUS_MATRIX_INVALID_ARGUMENT);
         goto cleanup;
@@ -176,12 +176,12 @@ int main(void)
     result = 0;
 
 cleanup:
-    numerus_optimizer_result_destroy(optimization);
-    numerus_rng_free_indices(indices);
-    numerus_rng_destroy(rng);
-    numerus_matrix_destroy(sample);
-    numerus_matrix_destroy(covariance);
-    numerus_matrix_destroy(mean);
-    numerus_matrix_destroy(observation);
+    numelyx_core_optimizer_result_destroy(optimization);
+    numelyx_core_rng_free_indices(indices);
+    numelyx_core_rng_destroy(rng);
+    numelyx_core_matrix_destroy(sample);
+    numelyx_core_matrix_destroy(covariance);
+    numelyx_core_matrix_destroy(mean);
+    numelyx_core_matrix_destroy(observation);
     return result;
 }

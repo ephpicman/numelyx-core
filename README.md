@@ -40,5 +40,5 @@ cmake --build build --target matrix_benchmark
 - `tests`: native C regression tests.
 - `docs`: numerical and subsystem contracts.
 
-The C symbols retain their upstream `numerus_*` names during the extraction;
+The C symbols retain their upstream `numelyx_core_*` names during the extraction;
 renaming the ABI is a separate compatibility decision.

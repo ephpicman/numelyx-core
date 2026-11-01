@@ -5,7 +5,7 @@
  * @details This standalone program measures selected Matrix operations for diagnostic comparison. Benchmark results are informational and are not correctness assertions or stable performance guarantees.
  */
 
-#include "../numerus_matrix.h"
+#include "../numelyx_core_matrix.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -95,12 +95,12 @@ static void report_measurement(
 
 static void benchmark_reads(
     const char *name,
-    const numerus_matrix *matrix,
+    const numelyx_core_matrix *matrix,
     size_t iterations
 )
 {
-    size_t rows = numerus_matrix_rows(matrix);
-    size_t columns = numerus_matrix_columns(matrix);
+    size_t rows = numelyx_core_matrix_rows(matrix);
+    size_t columns = numelyx_core_matrix_columns(matrix);
     size_t iteration;
     size_t row;
     size_t column;
@@ -114,7 +114,7 @@ static void benchmark_reads(
         for (row = 0; row < rows; row++) {
             for (column = 0; column < columns; column++) {
                 double value;
-                int status = numerus_matrix_get(
+                int status = numelyx_core_matrix_get(
                     matrix, row, column, &value
                 );
 
@@ -133,13 +133,13 @@ static void benchmark_reads(
 }
 
 static void benchmark_materialize(
-    const numerus_matrix *source,
+    const numelyx_core_matrix *source,
     size_t iterations
 )
 {
     size_t iteration;
-    size_t rows = numerus_matrix_rows(source);
-    size_t columns = numerus_matrix_columns(source);
+    size_t rows = numelyx_core_matrix_rows(source);
+    size_t columns = numelyx_core_matrix_columns(source);
     clock_t start;
     clock_t end;
 
@@ -147,22 +147,22 @@ static void benchmark_materialize(
     start = clock();
 
     for (iteration = 0; iteration < iterations; iteration++) {
-        numerus_matrix *result = NULL;
+        numelyx_core_matrix *result = NULL;
         double value;
-        int status = numerus_matrix_materialize(source, &result);
+        int status = numelyx_core_matrix_materialize(source, &result);
 
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "materialization benchmark failed: %d\n", status);
             exit(EXIT_FAILURE);
         }
 
-        status = numerus_matrix_get(result, 0, 0, &value);
+        status = numelyx_core_matrix_get(result, 0, 0, &value);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "materialized result read failed: %d\n", status);
             exit(EXIT_FAILURE);
         }
         benchmark_sink += value;
-        numerus_matrix_destroy(result);
+        numelyx_core_matrix_destroy(result);
     }
 
     end = clock();
@@ -175,8 +175,8 @@ static void benchmark_materialize(
 
 static void benchmark_multiplication(
     const char *name,
-    const numerus_matrix *left,
-    const numerus_matrix *right,
+    const numelyx_core_matrix *left,
+    const numelyx_core_matrix *right,
     size_t iterations
 )
 {
@@ -184,8 +184,8 @@ static void benchmark_multiplication(
     size_t calls[MULTIPLY_BENCHMARK_SAMPLES];
     size_t bytes[MULTIPLY_BENCHMARK_SAMPLES];
     size_t sample;
-    size_t rows = numerus_matrix_rows(left);
-    size_t columns = numerus_matrix_columns(right);
+    size_t rows = numelyx_core_matrix_rows(left);
+    size_t columns = numelyx_core_matrix_columns(right);
 
     for (sample = 0; sample < MULTIPLY_BENCHMARK_SAMPLES; sample++) {
         size_t iteration;
@@ -195,22 +195,22 @@ static void benchmark_multiplication(
         reset_allocation_stats();
         start = clock();
         for (iteration = 0; iteration < iterations; iteration++) {
-            numerus_matrix *result = NULL;
+            numelyx_core_matrix *result = NULL;
             double value;
-            int status = numerus_matrix_multiply(left, right, &result);
+            int status = numelyx_core_matrix_multiply(left, right, &result);
 
             if (status != NUMERUS_MATRIX_SUCCESS) {
                 fprintf(stderr, "multiplication benchmark failed: %d\n", status);
                 exit(EXIT_FAILURE);
             }
-            status = numerus_matrix_get(result, 0, 0, &value);
+            status = numelyx_core_matrix_get(result, 0, 0, &value);
             if (status != NUMERUS_MATRIX_SUCCESS) {
                 fprintf(stderr, "product read failed: %d\n", status);
-                numerus_matrix_destroy(result);
+                numelyx_core_matrix_destroy(result);
                 exit(EXIT_FAILURE);
             }
             benchmark_sink += value;
-            numerus_matrix_destroy(result);
+            numelyx_core_matrix_destroy(result);
         }
         end = clock();
         seconds[sample] = (double) (end - start) / (double) CLOCKS_PER_SEC;
@@ -252,13 +252,13 @@ static void benchmark_multiplication(
 }
 
 static void benchmark_inverse(
-    const numerus_matrix *matrix,
+    const numelyx_core_matrix *matrix,
     size_t iterations
 )
 {
-    numerus_matrix **fresh;
+    numelyx_core_matrix **fresh;
     size_t iteration;
-    size_t size = numerus_matrix_rows(matrix);
+    size_t size = numelyx_core_matrix_rows(matrix);
     clock_t start;
     clock_t end;
 
@@ -268,10 +268,10 @@ static void benchmark_inverse(
         exit(EXIT_FAILURE);
     }
     for (iteration = 0; iteration < iterations; iteration++) {
-        int status = numerus_matrix_materialize(matrix, &fresh[iteration]);
+        int status = numelyx_core_matrix_materialize(matrix, &fresh[iteration]);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "inverse benchmark setup failed: %d\n", status);
-            while (iteration > 0) numerus_matrix_destroy(fresh[--iteration]);
+            while (iteration > 0) numelyx_core_matrix_destroy(fresh[--iteration]);
             free(fresh);
             exit(EXIT_FAILURE);
         }
@@ -280,67 +280,67 @@ static void benchmark_inverse(
     reset_allocation_stats();
     start = clock();
     for (iteration = 0; iteration < iterations; iteration++) {
-        numerus_matrix *inverse = NULL;
+        numelyx_core_matrix *inverse = NULL;
         double value;
-        int status = numerus_matrix_inverse(fresh[iteration], &inverse);
+        int status = numelyx_core_matrix_inverse(fresh[iteration], &inverse);
 
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "inverse benchmark failed: %d\n", status);
             exit(EXIT_FAILURE);
         }
-        status = numerus_matrix_get(inverse, 0, 0, &value);
+        status = numelyx_core_matrix_get(inverse, 0, 0, &value);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "inverse result read failed: %d\n", status);
-            numerus_matrix_destroy(inverse);
+            numelyx_core_matrix_destroy(inverse);
             exit(EXIT_FAILURE);
         }
         benchmark_sink += value;
-        numerus_matrix_destroy(inverse);
+        numelyx_core_matrix_destroy(inverse);
     }
 
     end = clock();
     report_measurement("LU inverse (cold)", size, size, iterations, start, end);
     for (iteration = 0; iteration < iterations; iteration++) {
-        numerus_matrix_destroy(fresh[iteration]);
+        numelyx_core_matrix_destroy(fresh[iteration]);
     }
     free(fresh);
 }
 
 static void benchmark_inverse_cache_hit(
-    const numerus_matrix *matrix,
+    const numelyx_core_matrix *matrix,
     size_t iterations
 )
 {
     size_t iteration;
-    size_t size = numerus_matrix_rows(matrix);
-    numerus_matrix *warm = NULL;
+    size_t size = numelyx_core_matrix_rows(matrix);
+    numelyx_core_matrix *warm = NULL;
     clock_t start;
     clock_t end;
 
-    if (numerus_matrix_inverse(matrix, &warm) != NUMERUS_MATRIX_SUCCESS) {
+    if (numelyx_core_matrix_inverse(matrix, &warm) != NUMERUS_MATRIX_SUCCESS) {
         fprintf(stderr, "inverse cache warmup failed\n");
         exit(EXIT_FAILURE);
     }
-    numerus_matrix_destroy(warm);
+    numelyx_core_matrix_destroy(warm);
 
     reset_allocation_stats();
     start = clock();
     for (iteration = 0; iteration < iterations; iteration++) {
-        numerus_matrix *inverse = NULL;
+        numelyx_core_matrix *inverse = NULL;
         double value;
-        int status = numerus_matrix_inverse(matrix, &inverse);
+        int status = numelyx_core_matrix_inverse(matrix, &inverse);
 
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "inverse cache-hit benchmark failed: %d\n", status);
             exit(EXIT_FAILURE);
         }
-        status = numerus_matrix_get(inverse, 0, 0, &value);
+        status = numelyx_core_matrix_get(inverse, 0, 0, &value);
         if (status != NUMERUS_MATRIX_SUCCESS) {
-            numerus_matrix_destroy(inverse);
+            numelyx_core_matrix_destroy(inverse);
             exit(EXIT_FAILURE);
         }
         benchmark_sink += value;
-        numerus_matrix_destroy(inverse);
+        numelyx_core_matrix_destroy(inverse);
     }
     end = clock();
     report_measurement("inverse cache hit", size, size, iterations, start, end);
@@ -348,16 +348,16 @@ static void benchmark_inverse_cache_hit(
 
 
 static void benchmark_solve_lu_cache(
-    const numerus_matrix *matrix,
+    const numelyx_core_matrix *matrix,
     size_t iterations
 )
 {
     size_t iteration;
-    size_t size = numerus_matrix_rows(matrix);
+    size_t size = numelyx_core_matrix_rows(matrix);
     double *rhs_values = calloc(size, sizeof(*rhs_values));
-    numerus_matrix *rhs = NULL;
-    numerus_matrix **fresh = NULL;
-    numerus_matrix *warm_solution = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix **fresh = NULL;
+    numelyx_core_matrix *warm_solution = NULL;
     clock_t start;
     clock_t end;
 
@@ -368,7 +368,7 @@ static void benchmark_solve_lu_cache(
     for (iteration = 0; iteration < size; iteration++) {
         rhs_values[iteration] = 1.0;
     }
-    if (numerus_matrix_create_dense(size, 1, rhs_values, &rhs) !=
+    if (numelyx_core_matrix_create_dense(size, 1, rhs_values, &rhs) !=
         NUMERUS_MATRIX_SUCCESS) {
         free(rhs_values);
         exit(EXIT_FAILURE);
@@ -377,15 +377,15 @@ static void benchmark_solve_lu_cache(
 
     fresh = calloc(iterations, sizeof(*fresh));
     if (fresh == NULL) {
-        numerus_matrix_destroy(rhs);
+        numelyx_core_matrix_destroy(rhs);
         exit(EXIT_FAILURE);
     }
     for (iteration = 0; iteration < iterations; iteration++) {
-        if (numerus_matrix_materialize(matrix, &fresh[iteration]) !=
+        if (numelyx_core_matrix_materialize(matrix, &fresh[iteration]) !=
             NUMERUS_MATRIX_SUCCESS) {
-            while (iteration > 0) numerus_matrix_destroy(fresh[--iteration]);
+            while (iteration > 0) numelyx_core_matrix_destroy(fresh[--iteration]);
             free(fresh);
-            numerus_matrix_destroy(rhs);
+            numelyx_core_matrix_destroy(rhs);
             exit(EXIT_FAILURE);
         }
     }
@@ -393,67 +393,67 @@ static void benchmark_solve_lu_cache(
     reset_allocation_stats();
     start = clock();
     for (iteration = 0; iteration < iterations; iteration++) {
-        numerus_matrix *solution = NULL;
+        numelyx_core_matrix *solution = NULL;
         double value;
-        int status = numerus_matrix_solve(fresh[iteration], rhs, &solution);
+        int status = numelyx_core_matrix_solve(fresh[iteration], rhs, &solution);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "cold solve benchmark failed: %d\n", status);
             exit(EXIT_FAILURE);
         }
-        status = numerus_matrix_get(solution, 0, 0, &value);
+        status = numelyx_core_matrix_get(solution, 0, 0, &value);
         if (status != NUMERUS_MATRIX_SUCCESS) {
-            numerus_matrix_destroy(solution);
+            numelyx_core_matrix_destroy(solution);
             exit(EXIT_FAILURE);
         }
         benchmark_sink += value;
-        numerus_matrix_destroy(solution);
+        numelyx_core_matrix_destroy(solution);
     }
     end = clock();
     report_measurement("solve (cold LU)", size, 1, iterations, start, end);
     for (iteration = 0; iteration < iterations; iteration++) {
-        numerus_matrix_destroy(fresh[iteration]);
+        numelyx_core_matrix_destroy(fresh[iteration]);
     }
     free(fresh);
 
-    if (numerus_matrix_solve(matrix, rhs, &warm_solution) !=
+    if (numelyx_core_matrix_solve(matrix, rhs, &warm_solution) !=
         NUMERUS_MATRIX_SUCCESS) {
-        numerus_matrix_destroy(rhs);
+        numelyx_core_matrix_destroy(rhs);
         exit(EXIT_FAILURE);
     }
-    numerus_matrix_destroy(warm_solution);
+    numelyx_core_matrix_destroy(warm_solution);
 
     reset_allocation_stats();
     start = clock();
     for (iteration = 0; iteration < iterations; iteration++) {
-        numerus_matrix *solution = NULL;
+        numelyx_core_matrix *solution = NULL;
         double value;
-        int status = numerus_matrix_solve(matrix, rhs, &solution);
+        int status = numelyx_core_matrix_solve(matrix, rhs, &solution);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "cached LU solve benchmark failed: %d\n", status);
-            numerus_matrix_destroy(rhs);
+            numelyx_core_matrix_destroy(rhs);
             exit(EXIT_FAILURE);
         }
-        status = numerus_matrix_get(solution, 0, 0, &value);
+        status = numelyx_core_matrix_get(solution, 0, 0, &value);
         if (status != NUMERUS_MATRIX_SUCCESS) {
-            numerus_matrix_destroy(solution);
-            numerus_matrix_destroy(rhs);
+            numelyx_core_matrix_destroy(solution);
+            numelyx_core_matrix_destroy(rhs);
             exit(EXIT_FAILURE);
         }
         benchmark_sink += value;
-        numerus_matrix_destroy(solution);
+        numelyx_core_matrix_destroy(solution);
     }
     end = clock();
     report_measurement("solve (cached LU)", size, 1, iterations, start, end);
-    numerus_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(rhs);
 }
 
 static void benchmark_condition_estimate(
-    const numerus_matrix *matrix,
+    const numelyx_core_matrix *matrix,
     size_t iterations
 )
 {
     size_t iteration;
-    size_t size = numerus_matrix_rows(matrix);
+    size_t size = numelyx_core_matrix_rows(matrix);
     clock_t start;
     clock_t end;
 
@@ -462,7 +462,7 @@ static void benchmark_condition_estimate(
 
     for (iteration = 0; iteration < iterations; iteration++) {
         double condition_estimate;
-        int status = numerus_matrix_condition_estimate_one(
+        int status = numelyx_core_matrix_condition_estimate_one(
             matrix, &condition_estimate
         );
 
@@ -481,35 +481,35 @@ static void benchmark_condition_estimate(
 
 #define CACHE_BENCHMARK_ITERATIONS 128
 
-static void benchmark_analysis_cache(numerus_matrix *source)
+static void benchmark_analysis_cache(numelyx_core_matrix *source)
 {
-    numerus_matrix *fresh[CACHE_BENCHMARK_ITERATIONS] = {NULL};
-    numerus_matrix_flags flags;
+    numelyx_core_matrix *fresh[CACHE_BENCHMARK_ITERATIONS] = {NULL};
+    numelyx_core_matrix_flags flags;
     size_t i;
-    size_t size = numerus_matrix_rows(source);
+    size_t size = numelyx_core_matrix_rows(source);
     clock_t start;
     clock_t end;
     int status;
 
     /* Prepare independent matrices outside the measured interval. */
     for (i = 0; i < CACHE_BENCHMARK_ITERATIONS; i++) {
-        status = numerus_matrix_materialize(source, &fresh[i]);
+        status = numelyx_core_matrix_materialize(source, &fresh[i]);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "cache benchmark setup failed: %d\n", status);
-            while (i > 0) numerus_matrix_destroy(fresh[--i]);
+            while (i > 0) numelyx_core_matrix_destroy(fresh[--i]);
             return;
         }
     }
 
     /* Warm the source explicitly so the hit cases are genuinely cache hits. */
-    status = numerus_matrix_get_flags(source, &flags);
+    status = numelyx_core_matrix_get_flags(source, &flags);
     if (status != NUMERUS_MATRIX_SUCCESS) {
         fprintf(stderr, "structural flags cache benchmark warmup failed: %d\n", status);
         goto cleanup;
     }
     {
         double determinant;
-        status = numerus_matrix_determinant(source, &determinant);
+        status = numelyx_core_matrix_determinant(source, &determinant);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "determinant cache benchmark warmup failed: %d\n", status);
             goto cleanup;
@@ -519,7 +519,7 @@ static void benchmark_analysis_cache(numerus_matrix *source)
     reset_allocation_stats();
     start = clock();
     for (i = 0; i < CACHE_BENCHMARK_ITERATIONS; i++) {
-        status = numerus_matrix_get_flags(fresh[i], &flags);
+        status = numelyx_core_matrix_get_flags(fresh[i], &flags);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "structural flags cache-miss benchmark failed: %d\n", status);
             goto cleanup;
@@ -533,7 +533,7 @@ static void benchmark_analysis_cache(numerus_matrix *source)
     reset_allocation_stats();
     start = clock();
     for (i = 0; i < CACHE_BENCHMARK_ITERATIONS; i++) {
-        status = numerus_matrix_get_flags(source, &flags);
+        status = numelyx_core_matrix_get_flags(source, &flags);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "structural flags cache-hit benchmark failed: %d\n", status);
             goto cleanup;
@@ -548,7 +548,7 @@ static void benchmark_analysis_cache(numerus_matrix *source)
     start = clock();
     for (i = 0; i < CACHE_BENCHMARK_ITERATIONS; i++) {
         double determinant;
-        status = numerus_matrix_determinant(fresh[i], &determinant);
+        status = numelyx_core_matrix_determinant(fresh[i], &determinant);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "determinant cache-miss benchmark failed: %d\n", status);
             goto cleanup;
@@ -563,7 +563,7 @@ static void benchmark_analysis_cache(numerus_matrix *source)
     start = clock();
     for (i = 0; i < CACHE_BENCHMARK_ITERATIONS; i++) {
         double determinant;
-        status = numerus_matrix_determinant(source, &determinant);
+        status = numelyx_core_matrix_determinant(source, &determinant);
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "determinant cache-hit benchmark failed: %d\n", status);
             goto cleanup;
@@ -576,17 +576,17 @@ static void benchmark_analysis_cache(numerus_matrix *source)
 
 cleanup:
     for (i = 0; i < CACHE_BENCHMARK_ITERATIONS; i++) {
-        numerus_matrix_destroy(fresh[i]);
+        numelyx_core_matrix_destroy(fresh[i]);
     }
 }
 
-static void verify_inverse_residual(const numerus_matrix *matrix)
+static void verify_inverse_residual(const numelyx_core_matrix *matrix)
 {
-    numerus_matrix *inverse = NULL;
-    size_t size = numerus_matrix_rows(matrix);
+    numelyx_core_matrix *inverse = NULL;
+    size_t size = numelyx_core_matrix_rows(matrix);
     size_t row;
     double maximum_residual = 0.0;
-    int status = numerus_matrix_inverse(matrix, &inverse);
+    int status = numelyx_core_matrix_inverse(matrix, &inverse);
 
     if (status != NUMERUS_MATRIX_SUCCESS) {
         fprintf(stderr, "inverse residual check failed: %d\n", status);
@@ -605,9 +605,9 @@ static void verify_inverse_residual(const numerus_matrix *matrix)
                 double left;
                 double right;
 
-                status = numerus_matrix_get(matrix, row, k, &left);
+                status = numelyx_core_matrix_get(matrix, row, k, &left);
                 if (status != NUMERUS_MATRIX_SUCCESS) goto failure;
-                status = numerus_matrix_get(inverse, k, column, &right);
+                status = numelyx_core_matrix_get(inverse, k, column, &right);
                 if (status != NUMERUS_MATRIX_SUCCESS) goto failure;
                 product += left * right;
             }
@@ -619,23 +619,23 @@ static void verify_inverse_residual(const numerus_matrix *matrix)
     }
 
     printf("LU inverse residual: max|A*A^-1-I|=%.6e\n", maximum_residual);
-    numerus_matrix_destroy(inverse);
+    numelyx_core_matrix_destroy(inverse);
     return;
 
 failure:
     fprintf(stderr, "inverse residual read failed: %d\n", status);
-    numerus_matrix_destroy(inverse);
+    numelyx_core_matrix_destroy(inverse);
     exit(EXIT_FAILURE);
 }
 
 static void benchmark_scale_view_creation(
-    numerus_matrix *parent,
+    numelyx_core_matrix *parent,
     size_t iterations
 )
 {
     size_t iteration;
-    size_t rows = numerus_matrix_rows(parent);
-    size_t columns = numerus_matrix_columns(parent);
+    size_t rows = numelyx_core_matrix_rows(parent);
+    size_t columns = numelyx_core_matrix_columns(parent);
     clock_t start;
     clock_t end;
 
@@ -643,14 +643,14 @@ static void benchmark_scale_view_creation(
     start = clock();
 
     for (iteration = 0; iteration < iterations; iteration++) {
-        numerus_matrix *view = NULL;
-        int status = numerus_matrix_create_scale(parent, 2.0, &view);
+        numelyx_core_matrix *view = NULL;
+        int status = numelyx_core_matrix_create_scale(parent, 2.0, &view);
 
         if (status != NUMERUS_MATRIX_SUCCESS) {
             fprintf(stderr, "scale view construction failed: %d\n", status);
             exit(EXIT_FAILURE);
         }
-        numerus_matrix_destroy(view);
+        numelyx_core_matrix_destroy(view);
     }
 
     end = clock();
@@ -664,23 +664,23 @@ int main(void)
     static double dense_values[MATRIX_SIZE * MATRIX_SIZE];
     static double diagonal_values[MATRIX_SIZE];
     static double upper_values[MATRIX_SIZE * (MATRIX_SIZE + 1) / 2];
-    static numerus_storage_sparse_entry sparse_entries[MATRIX_SIZE];
+    static numelyx_core_storage_sparse_entry sparse_entries[MATRIX_SIZE];
     static double small_values[SMALL_SIZE * SMALL_SIZE];
     static double ill_conditioned_values[SMALL_SIZE * SMALL_SIZE];
 
-    numerus_matrix *dense = NULL;
-    numerus_matrix *diagonal = NULL;
-    numerus_matrix *upper = NULL;
-    numerus_matrix *sparse = NULL;
-    numerus_matrix *identity = NULL;
-    numerus_matrix *zero = NULL;
-    numerus_matrix *transpose = NULL;
-    numerus_matrix *nested_view = NULL;
-    numerus_matrix *joined = NULL;
-    numerus_matrix *scaled = NULL;
-    numerus_matrix *sum = NULL;
-    numerus_matrix *small = NULL;
-    numerus_matrix *ill_conditioned = NULL;
+    numelyx_core_matrix *dense = NULL;
+    numelyx_core_matrix *diagonal = NULL;
+    numelyx_core_matrix *upper = NULL;
+    numelyx_core_matrix *sparse = NULL;
+    numelyx_core_matrix *identity = NULL;
+    numelyx_core_matrix *zero = NULL;
+    numelyx_core_matrix *transpose = NULL;
+    numelyx_core_matrix *nested_view = NULL;
+    numelyx_core_matrix *joined = NULL;
+    numelyx_core_matrix *scaled = NULL;
+    numelyx_core_matrix *sum = NULL;
+    numelyx_core_matrix *small = NULL;
+    numelyx_core_matrix *ill_conditioned = NULL;
     size_t row;
     size_t column;
     size_t packed_index = 0;
@@ -724,43 +724,43 @@ int main(void)
         }
     }
 
-    status = numerus_matrix_create_dense(
+    status = numelyx_core_matrix_create_dense(
         MATRIX_SIZE, MATRIX_SIZE, dense_values, &dense
     );
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_diagonal(
+    status = numelyx_core_matrix_create_diagonal(
         MATRIX_SIZE, diagonal_values, &diagonal
     );
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_upper_triangular(
+    status = numelyx_core_matrix_create_upper_triangular(
         MATRIX_SIZE, upper_values, &upper
     );
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_sparse(
+    status = numelyx_core_matrix_create_sparse(
         MATRIX_SIZE, MATRIX_SIZE, 0.0,
         sparse_entries, MATRIX_SIZE, &sparse
     );
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_identity(MATRIX_SIZE, &identity);
+    status = numelyx_core_matrix_create_identity(MATRIX_SIZE, &identity);
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_zero(MATRIX_SIZE, MATRIX_SIZE, &zero);
+    status = numelyx_core_matrix_create_zero(MATRIX_SIZE, MATRIX_SIZE, &zero);
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_transpose(dense, &transpose);
+    status = numelyx_core_matrix_create_transpose(dense, &transpose);
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_transpose(transpose, &nested_view);
+    status = numelyx_core_matrix_create_transpose(transpose, &nested_view);
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_join_horizontal(dense, transpose, &joined);
+    status = numelyx_core_matrix_create_join_horizontal(dense, transpose, &joined);
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_scale(dense, 2.0, &scaled);
+    status = numelyx_core_matrix_create_scale(dense, 2.0, &scaled);
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_add(dense, transpose, &sum);
+    status = numelyx_core_matrix_create_add(dense, transpose, &sum);
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
-    status = numerus_matrix_create_dense(
+    status = numelyx_core_matrix_create_dense(
         SMALL_SIZE, SMALL_SIZE, small_values, &small
     );
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
 
-    status = numerus_matrix_create_dense(
+    status = numelyx_core_matrix_create_dense(
         SMALL_SIZE, SMALL_SIZE, ill_conditioned_values, &ill_conditioned
     );
     if (status != NUMERUS_MATRIX_SUCCESS) goto fail;
@@ -796,35 +796,35 @@ int main(void)
     benchmark_condition_estimate(ill_conditioned, OPERATION_ITERATIONS);
     verify_inverse_residual(ill_conditioned);
 
-    numerus_matrix_destroy(ill_conditioned);
-    numerus_matrix_destroy(small);
-    numerus_matrix_destroy(sum);
-    numerus_matrix_destroy(scaled);
-    numerus_matrix_destroy(joined);
-    numerus_matrix_destroy(nested_view);
-    numerus_matrix_destroy(transpose);
-    numerus_matrix_destroy(zero);
-    numerus_matrix_destroy(identity);
-    numerus_matrix_destroy(sparse);
-    numerus_matrix_destroy(upper);
-    numerus_matrix_destroy(diagonal);
-    numerus_matrix_destroy(dense);
+    numelyx_core_matrix_destroy(ill_conditioned);
+    numelyx_core_matrix_destroy(small);
+    numelyx_core_matrix_destroy(sum);
+    numelyx_core_matrix_destroy(scaled);
+    numelyx_core_matrix_destroy(joined);
+    numelyx_core_matrix_destroy(nested_view);
+    numelyx_core_matrix_destroy(transpose);
+    numelyx_core_matrix_destroy(zero);
+    numelyx_core_matrix_destroy(identity);
+    numelyx_core_matrix_destroy(sparse);
+    numelyx_core_matrix_destroy(upper);
+    numelyx_core_matrix_destroy(diagonal);
+    numelyx_core_matrix_destroy(dense);
 
     return EXIT_SUCCESS;
 
 fail:
     fprintf(stderr, "benchmark setup failed: %d\n", status);
-    numerus_matrix_destroy(ill_conditioned);
-    numerus_matrix_destroy(small);
-    numerus_matrix_destroy(sum);
-    numerus_matrix_destroy(scaled);
-    numerus_matrix_destroy(joined);
-    numerus_matrix_destroy(transpose);
-    numerus_matrix_destroy(zero);
-    numerus_matrix_destroy(identity);
-    numerus_matrix_destroy(sparse);
-    numerus_matrix_destroy(upper);
-    numerus_matrix_destroy(diagonal);
-    numerus_matrix_destroy(dense);
+    numelyx_core_matrix_destroy(ill_conditioned);
+    numelyx_core_matrix_destroy(small);
+    numelyx_core_matrix_destroy(sum);
+    numelyx_core_matrix_destroy(scaled);
+    numelyx_core_matrix_destroy(joined);
+    numelyx_core_matrix_destroy(transpose);
+    numelyx_core_matrix_destroy(zero);
+    numelyx_core_matrix_destroy(identity);
+    numelyx_core_matrix_destroy(sparse);
+    numelyx_core_matrix_destroy(upper);
+    numelyx_core_matrix_destroy(diagonal);
+    numelyx_core_matrix_destroy(dense);
     return EXIT_FAILURE;
 }

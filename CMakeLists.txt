@@ -64,15 +64,15 @@ if(NUMELYX_BUILD_TESTS)
                 "-Wl,--wrap=free"
             )
         elseif(test_name MATCHES "^(gaussian_log_density_test|gaussian_sampling_test)$")
-            target_sources(${test_name} PRIVATE src/statistics/numerus_probability.c)
+            target_sources(${test_name} PRIVATE src/statistics/numelyx_core_probability.c)
             target_compile_definitions(${test_name} PRIVATE NUMERUS_PROBABILITY_TEST_ALLOCATOR)
         elseif(test_name STREQUAL "optimizer_test")
-            target_sources(${test_name} PRIVATE src/statistics/numerus_optimizer.c)
+            target_sources(${test_name} PRIVATE src/statistics/numelyx_core_optimizer.c)
             target_compile_definitions(${test_name} PRIVATE NUMERUS_OPTIMIZER_TEST_ALLOCATOR)
         elseif(test_name MATCHES "^(rng_sampling_test|rng_state_test)$")
             target_sources(${test_name} PRIVATE
-                src/statistics/numerus_rng.c
-                src/statistics/numerus_rng_sampling.c
+                src/statistics/numelyx_core_rng.c
+                src/statistics/numelyx_core_rng_sampling.c
             )
             target_compile_definitions(${test_name} PRIVATE NUMERUS_RNG_TEST_ALLOCATOR)
         endif()

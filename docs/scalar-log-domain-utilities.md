@@ -57,7 +57,7 @@ All selected APIs are C-internal first, consistent with [the API boundary decisi
 
 ## Status and output semantics
 
-The implemented functions use the focused `numerus_numeric_status` declared in `src/core/numerus_numeric.h`, with distinct success, invalid-argument, domain-error, non-finite-input, and numerical-failure outcomes. They do not reuse `numerus_matrix_status`.
+The implemented functions use the focused `numelyx_core_numeric_status` declared in `src/core/numelyx_core_numeric.h`, with distinct success, invalid-argument, domain-error, non-finite-input, and numerical-failure outcomes. They do not reuse `numelyx_core_matrix_status`.
 
 - Required output pointers are validated before reading input.
 - Output values remain unchanged on every non-success status.

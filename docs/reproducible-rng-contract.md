@@ -29,28 +29,28 @@ The uppermost bit of `stream` cannot affect the odd increment after the left shi
 
 ## C state lifecycle
 
-The state is opaque to callers. The implemented internal C API is declared in `src/statistics/numerus_rng.h`: 
+The state is opaque to callers. The implemented internal C API is declared in `src/statistics/numelyx_core_rng.h`: 
 
 ```c
-typedef struct numerus_rng numerus_rng;
+typedef struct numelyx_core_rng numelyx_core_rng;
 
-numerus_rng_status numerus_rng_create(
+numelyx_core_rng_status numelyx_core_rng_create(
     uint64_t seed,
     uint64_t stream,
-    numerus_rng **rng
+    numelyx_core_rng **rng
 );
 
-numerus_rng_status numerus_rng_next_u32(
-    numerus_rng *rng,
+numelyx_core_rng_status numelyx_core_rng_next_u32(
+    numelyx_core_rng *rng,
     uint32_t *value
 );
 
-numerus_rng_status numerus_rng_clone(
-    const numerus_rng *source,
-    numerus_rng **clone
+numelyx_core_rng_status numelyx_core_rng_clone(
+    const numelyx_core_rng *source,
+    numelyx_core_rng **clone
 );
 
-void numerus_rng_destroy(numerus_rng *rng);
+void numelyx_core_rng_destroy(numelyx_core_rng *rng);
 ```
 
 The names shown above match the current implementation; treat changes to these declarations as internal C API changes and update this contract and its tests together.
@@ -103,16 +103,16 @@ The names shown above match the current implementation; treat changes to these d
 
 ## Uniform and normal variate contract (#116)
 
-- `numerus_rng_uniform()` consumes exactly two raw outputs, forms 53 bits as `(high << 21) | (low >> 11)`, and divides by (2^{53}). The result is in ([0,1)); zero is allowed and one is excluded.
-- `numerus_rng_normal()` uses Box–Muller without caching. The first 53-bit value is mapped to ((0,1]) by adding one before division by (2^{53}), so `log(0)` is impossible. The next 53-bit value is mapped to ([0,1)) for the angle. Each valid normal call consumes exactly four raw outputs.
+- `numelyx_core_rng_uniform()` consumes exactly two raw outputs, forms 53 bits as `(high << 21) | (low >> 11)`, and divides by (2^{53}). The result is in ([0,1)); zero is allowed and one is excluded.
+- `numelyx_core_rng_normal()` uses Box–Muller without caching. The first 53-bit value is mapped to ((0,1]) by adding one before division by (2^{53}), so `log(0)` is impossible. The next 53-bit value is mapped to ([0,1)) for the angle. Each valid normal call consumes exactly four raw outputs.
 - Raw uniform conversion is bit-defined for binary64; normal values are expected to replay on the same supported runtime but are not promised bit-for-bit identical across different `libm` implementations.
 - No hidden cached normal value or global state exists. Invalid pointers do not advance the RNG or modify outputs. A valid transform publishes the output only after the computed value is finite.
 
 
 ## Index sampling contract (#117)
 
-- `numerus_rng_sample_indices()` requires a non-empty population. A zero-sized sample succeeds with a NULL result and consumes no RNG output. A sample without replacement cannot exceed the population size.
+- `numelyx_core_rng_sample_indices()` requires a non-empty population. A zero-sized sample succeeds with a NULL result and consumes no RNG output. A sample without replacement cannot exceed the population size.
 - With replacement, each result is drawn uniformly from `[0, population_size)` using rejection sampling over 64-bit values to avoid modulo bias.
 - Without replacement, Algorithm S selects a uniform subset using (O(N)) time and (O(k)) storage; Fisher–Yates then randomizes the returned order. The output contains no duplicates.
-- Result arrays are allocated by Numerus and must be released with `numerus_rng_free_indices()`. Size overflow and allocation failure leave the output NULL and do not advance the RNG state.
+- Result arrays are allocated by Numerus and must be released with `numelyx_core_rng_free_indices()`. Size overflow and allocation failure leave the output NULL and do not advance the RNG state.
 - Determinism is defined for the fixed algorithm version, seed/stream, sampling arguments and call sequence. The exact test vectors live in `tests/rng_sampling_test.c`.

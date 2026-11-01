@@ -4,10 +4,10 @@ Status: design contract for issues #113 and #114; this document does not claim e
 
 ## Existing source and tests
 
-- `numerus_matrix_cholesky()` in `numerus_matrix_cholesky.c` returns a dense lower-triangular factor for a symmetric positive-definite input. It rejects non-finite entries, checks symmetry with a scale-aware tolerance, and rejects pivots at/below its scale-aware threshold.
-- `numerus_matrix_solve()` in `numerus_matrix_solve.c` solves square nonsingular systems with multiple right-hand sides using LU with partial pivoting. It is not a triangular-solve API and does not itself provide covariance whitening.
-- `numerus_matrix_least_squares()` in `numerus_matrix_least_squares.c` uses pivoted QR and requires full column rank.
-- `numerus_matrix_determinant()` and LU are present, but no stable log-determinant API was found.
+- `numelyx_core_matrix_cholesky()` in `numelyx_core_matrix_cholesky.c` returns a dense lower-triangular factor for a symmetric positive-definite input. It rejects non-finite entries, checks symmetry with a scale-aware tolerance, and rejects pivots at/below its scale-aware threshold.
+- `numelyx_core_matrix_solve()` in `numelyx_core_matrix_solve.c` solves square nonsingular systems with multiple right-hand sides using LU with partial pivoting. It is not a triangular-solve API and does not itself provide covariance whitening.
+- `numelyx_core_matrix_least_squares()` in `numelyx_core_matrix_least_squares.c` uses pivoted QR and requires full column rank.
+- `numelyx_core_matrix_determinant()` and LU are present, but no stable log-determinant API was found.
 - Relevant tests: `tests/matrix_cholesky_test.c`, `tests/matrix_solve_test.c`, `tests/matrix_least_squares_test.c`, `tests/matrix_determinant_test.c`.
 
 ## Contract A — triangular solve
@@ -15,12 +15,12 @@ Status: design contract for issues #113 and #114; this document does not claim e
 Proposed C API:
 
 ```c
-numerus_matrix_status numerus_matrix_solve_triangular(
-    const numerus_matrix *triangular,
-    const numerus_matrix *right_hand_side,
+numelyx_core_matrix_status numelyx_core_matrix_solve_triangular(
+    const numelyx_core_matrix *triangular,
+    const numelyx_core_matrix *right_hand_side,
     bool lower,
     bool transpose,
-    numerus_matrix **solution
+    numelyx_core_matrix **solution
 );
 ```
 
@@ -47,8 +47,8 @@ A single orientation/transpose contract avoids separate lower/upper and transpos
 Proposed C API:
 
 ```c
-numerus_matrix_status numerus_matrix_log_determinant(
-    const numerus_matrix *matrix,
+numelyx_core_matrix_status numelyx_core_matrix_log_determinant(
+    const numelyx_core_matrix *matrix,
     int *sign,
     double *log_abs_determinant
 );

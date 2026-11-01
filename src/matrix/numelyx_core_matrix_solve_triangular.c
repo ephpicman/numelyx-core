@@ -11,7 +11,10 @@
 #include "numelyx_core_size.h"
 
 #include <math.h>
+#include <limits.h>
 #include <stdlib.h>
+
+#include <lapacke.h>
 
 # define matrix_triangular_alloc(size) malloc(size)
 # define matrix_triangular_free(pointer) free(pointer)
@@ -48,6 +51,7 @@ numelyx_core_matrix_status numelyx_core_matrix_solve_triangular(
     size_t column;
     double *values = NULL;
     double *work = NULL;
+    double *triangular_values = NULL;
     bool effective_lower;
     numelyx_core_matrix_status status;
 
@@ -117,6 +121,87 @@ numelyx_core_matrix_status numelyx_core_matrix_solve_triangular(
     }
 
     effective_lower = lower != transpose;
+
+    if (size <= (size_t) INT_MAX && rhs_columns <= (size_t) INT_MAX) {
+        size_t matrix_count;
+        size_t matrix_bytes;
+        lapack_int info;
+
+        if (!numelyx_core_size_multiply(size, size, &matrix_count) ||
+            !numelyx_core_size_multiply(
+                matrix_count, sizeof(*triangular_values), &matrix_bytes
+            )) {
+            status = NUMERUS_MATRIX_OVERFLOW;
+            goto cleanup;
+        }
+
+        triangular_values = matrix_triangular_alloc(matrix_bytes);
+        if (triangular_values == NULL) {
+            status = NUMERUS_MATRIX_OUT_OF_MEMORY;
+            goto cleanup;
+        }
+
+        for (row = 0; row < size; row++) {
+            for (column = 0; column < size; column++) {
+                status = numelyx_core_matrix_get(
+                    triangular, row, column,
+                    &triangular_values[row * size + column]
+                );
+                if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+            }
+        }
+        for (row = 0; row < size; row++) {
+            for (column = 0; column < rhs_columns; column++) {
+                double value;
+                status = numelyx_core_matrix_get(
+                    right_hand_side, row, column, &value
+                );
+                if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+                if (!isfinite(value)) {
+                    status = NUMERUS_MATRIX_NON_FINITE;
+                    goto cleanup;
+                }
+                values[row * rhs_columns + column] = value;
+            }
+        }
+
+        info = LAPACKE_dtrtrs(
+            LAPACK_ROW_MAJOR,
+            lower ? 'L' : 'U',
+            transpose ? 'T' : 'N',
+            'N',
+            (lapack_int) size,
+            (lapack_int) rhs_columns,
+            triangular_values,
+            (lapack_int) size,
+            values,
+            (lapack_int) rhs_columns
+        );
+        if (info == LAPACK_WORK_MEMORY_ERROR ||
+            info == LAPACK_TRANSPOSE_MEMORY_ERROR) {
+            status = NUMERUS_MATRIX_OUT_OF_MEMORY;
+            goto cleanup;
+        }
+        if (info > 0) {
+            status = NUMERUS_MATRIX_SINGULAR;
+            goto cleanup;
+        }
+        if (info < 0) {
+            status = NUMERUS_MATRIX_INVALID_ARGUMENT;
+            goto cleanup;
+        }
+        for (row = 0; row < element_count; row++) {
+            if (!isfinite(values[row])) {
+                status = NUMERUS_MATRIX_NON_FINITE;
+                goto cleanup;
+            }
+        }
+
+        status = (numelyx_core_matrix_status) numelyx_core_matrix_create_dense(
+            size, rhs_columns, values, solution
+        );
+        goto cleanup;
+    }
 
     for (column = 0; column < rhs_columns; column++) {
         if (effective_lower) {
@@ -225,6 +310,9 @@ numelyx_core_matrix_status numelyx_core_matrix_solve_triangular(
     );
 
 cleanup:
+    if (triangular_values != NULL) {
+        matrix_triangular_free(triangular_values);
+    }
     if (work != NULL) {
         matrix_triangular_free(work);
     }

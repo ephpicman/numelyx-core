@@ -140,6 +140,16 @@ static numelyx_core_matrix_status matrix_qr_decompose_internal(
             (lapack_int) columns,
             tau
         );
+        if (info == LAPACK_WORK_MEMORY_ERROR ||
+            info == LAPACK_TRANSPOSE_MEMORY_ERROR) {
+            status = NUMERUS_MATRIX_OUT_OF_MEMORY;
+            goto cleanup;
+        }
+        if (info == LAPACK_WORK_MEMORY_ERROR ||
+            info == LAPACK_TRANSPOSE_MEMORY_ERROR) {
+            status = NUMERUS_MATRIX_OUT_OF_MEMORY;
+            goto cleanup;
+        }
         if (info != 0) {
             status = info > 0
                 ? NUMERUS_MATRIX_NO_CONVERGENCE

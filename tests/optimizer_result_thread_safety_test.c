@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stddef.h>
-#include <threads.h>
+#include "test_threads.h"
 
 typedef struct {
     numelyx_core_optimizer_result *result;
@@ -70,7 +70,7 @@ int main(void)
     numelyx_core_optimizer_options options;
     numelyx_core_optimizer_result *result = NULL;
     result_worker_args arguments[THREAD_COUNT];
-    thrd_t threads[THREAD_COUNT];
+    test_thread_t threads[THREAD_COUNT];
     size_t index;
 
     assert(numelyx_core_optimizer_default_options(&options) ==
@@ -85,12 +85,11 @@ int main(void)
         arguments[index].failed = 0;
         assert(numelyx_core_optimizer_result_retain(result) ==
             NUMERUS_OPTIMIZER_SUCCESS);
-        assert(thrd_create(&threads[index], result_worker, &arguments[index]) ==
-            thrd_success);
+        assert(test_thread_create(&threads[index], result_worker, &arguments[index]));
     }
     for (index = 0; index < THREAD_COUNT; index++) {
         int thread_result = -1;
-        assert(thrd_join(threads[index], &thread_result) == thrd_success);
+        assert(test_thread_join(&threads[index], &thread_result));
         assert(thread_result == 0);
         assert(arguments[index].failed == 0);
     }

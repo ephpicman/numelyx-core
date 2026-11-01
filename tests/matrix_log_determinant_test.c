@@ -8,7 +8,7 @@
  * documentation. This file is test support, not runtime code.
  */
 
-#include "../numerus_matrix.h"
+#include "../numelyx_core_matrix.h"
 
 #include <assert.h>
 #include <math.h>
@@ -22,18 +22,18 @@ static void assert_logdet(
     double tolerance
 )
 {
-    numerus_matrix *matrix = NULL;
+    numelyx_core_matrix *matrix = NULL;
     int sign = 0;
     double log_abs = NAN;
 
-    assert(numerus_matrix_create_dense(size, size, values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(size, size, values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_log_determinant(
+    assert(numelyx_core_matrix_log_determinant(
         matrix, &sign, &log_abs
     ) == NUMERUS_MATRIX_SUCCESS);
     assert(sign == expected_sign);
     assert(fabs(log_abs - expected_log_abs) <= tolerance);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_identity_and_diagonal(void)
@@ -72,43 +72,43 @@ static void test_singular_and_invalid_inputs_preserve_outputs(void)
     const double singular[] = {1, 0, 0, 0};
     const double nonfinite[] = {1, 0, 0, NAN};
     const double non_square[] = {1, 0, 0, 1, 2, 3};
-    numerus_matrix *matrix = NULL;
+    numelyx_core_matrix *matrix = NULL;
     int sign = 17;
     double log_abs = 23.0;
 
-    assert(numerus_matrix_create_dense(2, 2, singular, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, singular, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_log_determinant(
+    assert(numelyx_core_matrix_log_determinant(
         matrix, &sign, &log_abs
     ) == NUMERUS_MATRIX_SINGULAR);
     assert(sign == 17);
     assert(log_abs == 23.0);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(2, 2, nonfinite, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, nonfinite, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_log_determinant(
+    assert(numelyx_core_matrix_log_determinant(
         matrix, &sign, &log_abs
     ) == NUMERUS_MATRIX_NON_FINITE);
     assert(sign == 17);
     assert(log_abs == 23.0);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(2, 3, non_square, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 3, non_square, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_log_determinant(
+    assert(numelyx_core_matrix_log_determinant(
         matrix, &sign, &log_abs
     ) == NUMERUS_MATRIX_NOT_SQUARE);
     assert(sign == 17);
     assert(log_abs == 23.0);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_log_determinant(
+    assert(numelyx_core_matrix_log_determinant(
         NULL, &sign, &log_abs
     ) == NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(sign == 17);
     assert(log_abs == 23.0);
-    assert(numerus_matrix_log_determinant(
+    assert(numelyx_core_matrix_log_determinant(
         NULL, NULL, &log_abs
     ) == NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(log_abs == 23.0);
@@ -121,18 +121,18 @@ static void test_finite_input_with_nonfinite_factorization(void)
         1e308, 1e308,
         1e308, -1e308
     };
-    numerus_matrix *matrix = NULL;
+    numelyx_core_matrix *matrix = NULL;
     int sign = 17;
     double log_abs = 23.0;
 
-    assert(numerus_matrix_create_dense(2, 2, values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_log_determinant(
+    assert(numelyx_core_matrix_log_determinant(
         matrix, &sign, &log_abs
     ) == NUMERUS_MATRIX_NON_FINITE);
     assert(sign == 17);
     assert(log_abs == 23.0);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 int main(void)

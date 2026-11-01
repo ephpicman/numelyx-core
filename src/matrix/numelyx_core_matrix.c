@@ -494,7 +494,7 @@ int numelyx_core_matrix_create_from_parent_with_transforms(
 
     status = numelyx_core_matrix_retain(parent);
     if (status != NUMERUS_MATRIX_SUCCESS) {
-        numelyx_core_matrix_free(result);
+        numelyx_core_matrix_destroy(result);
         return status;
     }
 

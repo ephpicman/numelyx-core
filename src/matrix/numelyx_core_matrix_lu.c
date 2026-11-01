@@ -13,7 +13,10 @@
 
 #include <math.h>
 #include <stdint.h>
+#include <limits.h>
 #include <stdlib.h>
+
+#include <lapacke.h>
 
 # define matrix_lu_alloc(size) malloc(size)
 # define matrix_lu_free(ptr) free(ptr)
@@ -81,6 +84,7 @@ numelyx_core_matrix_status numelyx_core_matrix_lu_factorize(
     size_t permutation_bytes;
     size_t row;
     size_t column;
+    bool finite_values = true;
 
     if (factorization == NULL) {
         return NUMERUS_MATRIX_INVALID_ARGUMENT;
@@ -144,65 +148,119 @@ numelyx_core_matrix_status numelyx_core_matrix_lu_factorize(
         }
     }
 
-    for (column = 0; column < size; column++) {
-        size_t pivot_row = column;
-        size_t candidate_row;
-        double pivot_magnitude = fabs(
-            result->values[column * size + column]
-        );
+    if (finite_values && size <= (size_t) INT_MAX) {
+        size_t pivot_bytes;
+        lapack_int *pivots;
+        lapack_int info;
 
-        for (candidate_row = column + 1;
-             candidate_row < size;
-             candidate_row++) {
-            double magnitude = fabs(
-                result->values[candidate_row * size + column]
+        if (!numelyx_core_size_multiply(size, sizeof(*pivots), &pivot_bytes)) {
+            numelyx_core_matrix_lu_destroy(result);
+            return NUMERUS_MATRIX_OVERFLOW;
+        }
+        pivots = matrix_lu_alloc(pivot_bytes);
+        if (pivots == NULL) {
+            numelyx_core_matrix_lu_destroy(result);
+            return NUMERUS_MATRIX_OUT_OF_MEMORY;
+        }
+
+        info = LAPACKE_dgetrf(
+            LAPACK_ROW_MAJOR,
+            (lapack_int) size,
+            (lapack_int) size,
+            result->values,
+            (lapack_int) size,
+            pivots
+        );
+        if (info < 0) {
+            matrix_lu_free(pivots);
+            numelyx_core_matrix_lu_destroy(result);
+            return NUMERUS_MATRIX_INVALID_ARGUMENT;
+        }
+
+        for (row = 0; row < size; row++) {
+            lapack_int pivot = pivots[row];
+            if (pivot < 1 || (size_t) pivot > size) {
+                matrix_lu_free(pivots);
+                numelyx_core_matrix_lu_destroy(result);
+                return NUMERUS_MATRIX_INVALID_ARGUMENT;
+            }
+            if ((size_t) pivot - 1 != row) {
+                size_t temporary = result->permutation[row];
+                result->permutation[row] = result->permutation[(size_t) pivot - 1];
+                result->permutation[(size_t) pivot - 1] = temporary;
+                result->permutation_sign = -result->permutation_sign;
+            }
+            if (result->values[row * size + row] != 0.0) {
+                result->rank++;
+            }
+        }
+
+        matrix_lu_free(pivots);
+    } else {
+        /*
+         * Preserve the reference path for non-finite data and dimensions that
+         * exceed LAPACK's conservative 32-bit call boundary.
+         */
+        for (column = 0; column < size; column++) {
+            size_t pivot_row = column;
+            size_t candidate_row;
+            double pivot_magnitude = fabs(
+                result->values[column * size + column]
             );
 
-            if (magnitude > pivot_magnitude) {
-                pivot_magnitude = magnitude;
-                pivot_row = candidate_row;
-            }
-        }
+            for (candidate_row = column + 1;
+                 candidate_row < size;
+                 candidate_row++) {
+                double magnitude = fabs(
+                    result->values[candidate_row * size + column]
+                );
 
-        if (result->values[pivot_row * size + column] == 0.0) {
-            continue;
-        }
-
-        if (pivot_row != column) {
-            size_t swap_column;
-            size_t temporary_permutation = result->permutation[column];
-
-            result->permutation[column] = result->permutation[pivot_row];
-            result->permutation[pivot_row] = temporary_permutation;
-
-            for (swap_column = 0; swap_column < size; swap_column++) {
-                double temporary = result->values[
-                    column * size + swap_column
-                ];
-                result->values[column * size + swap_column] =
-                    result->values[pivot_row * size + swap_column];
-                result->values[pivot_row * size + swap_column] = temporary;
+                if (magnitude > pivot_magnitude) {
+                    pivot_magnitude = magnitude;
+                    pivot_row = candidate_row;
+                }
             }
 
-            result->permutation_sign = -result->permutation_sign;
-        }
+            if (result->values[pivot_row * size + column] == 0.0) {
+                continue;
+            }
 
-        {
-            double pivot = result->values[column * size + column];
+            if (pivot_row != column) {
+                size_t swap_column;
+                size_t temporary_permutation = result->permutation[column];
 
-            result->rank++;
-            for (row = column + 1; row < size; row++) {
-                size_t update_column;
-                double multiplier = result->values[row * size + column] / pivot;
+                result->permutation[column] = result->permutation[pivot_row];
+                result->permutation[pivot_row] = temporary_permutation;
 
-                result->values[row * size + column] = multiplier;
-                for (update_column = column + 1;
-                     update_column < size;
-                     update_column++) {
-                    result->values[row * size + update_column] -=
-                        multiplier * result->values[
-                            column * size + update_column
-                        ];
+                for (swap_column = 0; swap_column < size; swap_column++) {
+                    double temporary = result->values[
+                        column * size + swap_column
+                    ];
+                    result->values[column * size + swap_column] =
+                        result->values[pivot_row * size + swap_column];
+                    result->values[pivot_row * size + swap_column] = temporary;
+                }
+
+                result->permutation_sign = -result->permutation_sign;
+            }
+
+            {
+                double pivot = result->values[column * size + column];
+
+                result->rank++;
+                for (row = column + 1; row < size; row++) {
+                    size_t update_column;
+                    double multiplier = result->values[row * size + column] / pivot;
+
+                    result->values[row * size + column] = multiplier;
+                    for (update_column = column + 1;
+                         update_column < size;
+                         update_column++) {
+                        result->values[row * size + update_column] -=
+                            multiplier * result->values[
+                                column * size + update_column
+                            ];
+                    }
                 }
             }
         }

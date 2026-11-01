@@ -9,6 +9,9 @@
  */
 
 #include "numelyx_core_rng.h"
+#include "numelyx_core_rng_internal.h"
+#include "numelyx_core_lifetime.h"
+#include "numelyx_core_mutex.h"
 
 #include <float.h>
 #include <math.h>
@@ -31,6 +34,8 @@ void numelyx_core_rng_test_free(void *pointer);
 #define NUMERUS_PCG32_MULTIPLIER UINT64_C(6364136223846793005)
 
 struct numelyx_core_rng {
+    numelyx_core_lifetime lifetime;
+    numelyx_core_mutex mutex;
     uint64_t state;
     uint64_t increment;
 };
@@ -39,6 +44,8 @@ struct numelyx_core_rng {
  * PCG-XSH-RR 64/32 reference transition and output permutation.
  * Unsigned uint64_t wraparound is part of the specified algorithm.
  */
+static void rng_destroy_final(void *object);
+
 static uint32_t numelyx_core_rng_next_u32_unchecked(numelyx_core_rng *rng)
 {
     uint64_t old_state = rng->state;
@@ -84,6 +91,17 @@ numelyx_core_rng_status numelyx_core_rng_create(
     if (result == NULL) {
         return NUMERUS_RNG_OUT_OF_MEMORY;
     }
+    if (!numelyx_core_mutex_init(&result->mutex)) {
+        numelyx_core_rng_free(result);
+        return NUMERUS_RNG_OUT_OF_MEMORY;
+    }
+    if (numelyx_core_lifetime_init(
+            &result->lifetime, rng_destroy_final
+        ) != NUMELYX_CORE_LIFETIME_SUCCESS) {
+        numelyx_core_mutex_destroy(&result->mutex);
+        numelyx_core_rng_free(result);
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
 
     numelyx_core_rng_seed_unchecked(result, seed, stream);
     *rng = result;
@@ -101,8 +119,12 @@ numelyx_core_rng_status numelyx_core_rng_next_u32(
         return NUMERUS_RNG_INVALID_ARGUMENT;
     }
 
+    if (!numelyx_core_mutex_lock(&rng->mutex)) {
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
     result = numelyx_core_rng_next_u32_unchecked(rng);
     *value = result;
+    (void) numelyx_core_mutex_unlock(&rng->mutex);
     return NUMERUS_RNG_SUCCESS;
 }
 
@@ -122,14 +144,32 @@ numelyx_core_rng_status numelyx_core_rng_clone(
         return NUMERUS_RNG_INVALID_ARGUMENT;
     }
 
+    if (!numelyx_core_mutex_lock((numelyx_core_mutex *) &source->mutex)) {
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
     result = numelyx_core_rng_alloc(sizeof(*result));
     if (result == NULL) {
+        (void) numelyx_core_mutex_unlock((numelyx_core_mutex *) &source->mutex);
         return NUMERUS_RNG_OUT_OF_MEMORY;
+    }
+    if (!numelyx_core_mutex_init(&result->mutex)) {
+        numelyx_core_rng_free(result);
+        (void) numelyx_core_mutex_unlock((numelyx_core_mutex *) &source->mutex);
+        return NUMERUS_RNG_OUT_OF_MEMORY;
+    }
+    if (numelyx_core_lifetime_init(
+            &result->lifetime, rng_destroy_final
+        ) != NUMELYX_CORE_LIFETIME_SUCCESS) {
+        numelyx_core_mutex_destroy(&result->mutex);
+        numelyx_core_rng_free(result);
+        (void) numelyx_core_mutex_unlock((numelyx_core_mutex *) &source->mutex);
+        return NUMERUS_RNG_INVALID_ARGUMENT;
     }
 
     result->state = source->state;
     result->increment = source->increment;
     *clone = result;
+    (void) numelyx_core_mutex_unlock((numelyx_core_mutex *) &source->mutex);
     return NUMERUS_RNG_SUCCESS;
 }
 
@@ -157,13 +197,18 @@ numelyx_core_rng_status numelyx_core_rng_uniform(
         return NUMERUS_RNG_INVALID_ARGUMENT;
     }
 
+    if (!numelyx_core_mutex_lock(&rng->mutex)) {
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
     bits = numelyx_core_rng_next_53_bits(rng);
     result = (double) bits / 9007199254740992.0;
     if (!isfinite(result) || result < 0.0 || result >= 1.0) {
+        (void) numelyx_core_mutex_unlock(&rng->mutex);
         return NUMERUS_RNG_NUMERICAL_FAILURE;
     }
 
     *value = result;
+    (void) numelyx_core_mutex_unlock(&rng->mutex);
     return NUMERUS_RNG_SUCCESS;
 }
 
@@ -183,6 +228,9 @@ numelyx_core_rng_status numelyx_core_rng_normal(
         return NUMERUS_RNG_INVALID_ARGUMENT;
     }
 
+    if (!numelyx_core_mutex_lock(&rng->mutex)) {
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
     radial_bits = numelyx_core_rng_next_53_bits(rng);
     angular_bits = numelyx_core_rng_next_53_bits(rng);
 
@@ -195,16 +243,46 @@ numelyx_core_rng_status numelyx_core_rng_normal(
     result = sqrt(-2.0 * log(u1)) * cos(two_pi * u2);
 
     if (!isfinite(result)) {
+        (void) numelyx_core_mutex_unlock(&rng->mutex);
         return NUMERUS_RNG_NUMERICAL_FAILURE;
     }
 
     *value = result;
+    (void) numelyx_core_mutex_unlock(&rng->mutex);
     return NUMERUS_RNG_SUCCESS;
+}
+
+int numelyx_core_rng_lock_internal(numelyx_core_rng *rng)
+{
+    return rng != NULL && numelyx_core_mutex_lock(&rng->mutex);
+}
+
+void numelyx_core_rng_unlock_internal(numelyx_core_rng *rng)
+{
+    if (rng != NULL) (void) numelyx_core_mutex_unlock(&rng->mutex);
+}
+
+static void rng_destroy_final(void *object)
+{
+    numelyx_core_rng *rng = (numelyx_core_rng *) object;
+    numelyx_core_mutex_destroy(&rng->mutex);
+    numelyx_core_rng_free(rng);
+}
+
+numelyx_core_rng_status numelyx_core_rng_retain(numelyx_core_rng *rng)
+{
+    numelyx_core_lifetime_status status;
+
+    if (rng == NULL) return NUMERUS_RNG_INVALID_ARGUMENT;
+    status = numelyx_core_lifetime_retain(&rng->lifetime);
+    if (status == NUMELYX_CORE_LIFETIME_SUCCESS) return NUMERUS_RNG_SUCCESS;
+    if (status == NUMELYX_CORE_LIFETIME_OVERFLOW) return NUMERUS_RNG_SIZE_OVERFLOW;
+    return NUMERUS_RNG_INVALID_ARGUMENT;
 }
 
 void numelyx_core_rng_destroy(numelyx_core_rng *rng)
 {
     if (rng != NULL) {
-        numelyx_core_rng_free(rng);
+        (void) numelyx_core_lifetime_release(&rng->lifetime, rng);
     }
 }

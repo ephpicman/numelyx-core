@@ -51,8 +51,9 @@ CBLAS/LAPACKE integer dimensions are range-checked before conversion.
 
 ## Remaining migration
 
-The integration currently dispatches GEMM, LU, Cholesky, and unpivoted QR.
-Pivoted QR remains on its existing native implementation because its
-rank-revealing permutation contract is separate from unpivoted QR. Sparse and structured Storage fast paths
-remain Numelyx Core responsibilities; a general sparse solver dependency is
-not introduced by this change.
+The integration dispatches GEMM, LU, Cholesky, unpivoted QR, reduced SVD,
+symmetric eigen decomposition, and triangular solves. Pivoted QR remains on
+its existing native implementation because its rank-revealing permutation
+contract is separate from unpivoted QR. Sparse and structured Storage fast
+paths remain Numelyx Core responsibilities; a general sparse solver dependency
+is not introduced by this change.

@@ -10,6 +10,7 @@
 
 #include "numelyx_core_optimizer.h"
 #include "numelyx_core_size.h"
+#include "numelyx_core_lifetime.h"
 
 #include <float.h>
 #include <math.h>
@@ -30,6 +31,7 @@ void numelyx_core_optimizer_test_free(void *pointer);
 #define NUMERUS_OPTIMIZER_BACKTRACKING_RATIO 0.5
 
 struct numelyx_core_optimizer_result {
+    numelyx_core_lifetime lifetime;
     size_t parameter_count;
     double *parameters;
     double objective_value;
@@ -39,6 +41,8 @@ struct numelyx_core_optimizer_result {
     size_t gradient_evaluations;
     numelyx_core_optimizer_termination termination;
 };
+
+static void optimizer_result_destroy_final(void *object);
 
 typedef enum {
     OBJECTIVE_EVALUATION_OK = 0,
@@ -481,6 +485,12 @@ numelyx_core_optimizer_status numelyx_core_optimizer_minimize(
         return NUMERUS_OPTIMIZER_OUT_OF_MEMORY;
     }
     memset(output, 0, sizeof(*output));
+    if (numelyx_core_lifetime_init(
+            &output->lifetime, optimizer_result_destroy_final
+        ) != NUMELYX_CORE_LIFETIME_SUCCESS) {
+        numelyx_core_optimizer_free(output);
+        return NUMERUS_OPTIMIZER_INVALID_ARGUMENT;
+    }
     output->parameter_count = parameter_count;
     output->termination = NUMERUS_OPTIMIZER_NUMERICAL_BREAKDOWN;
     output->parameters = numelyx_core_optimizer_alloc(vector_bytes);
@@ -735,13 +745,32 @@ api_failure:
     return api_status;
 }
 
+static void optimizer_result_destroy_final(void *object)
+{
+    numelyx_core_optimizer_result *result =
+        (numelyx_core_optimizer_result *) object;
+
+    numelyx_core_optimizer_free(result->parameters);
+    numelyx_core_optimizer_free(result);
+}
+
+numelyx_core_optimizer_status numelyx_core_optimizer_result_retain(
+    numelyx_core_optimizer_result *result
+)
+{
+    numelyx_core_lifetime_status status;
+
+    if (result == NULL) return NUMERUS_OPTIMIZER_INVALID_ARGUMENT;
+    status = numelyx_core_lifetime_retain(&result->lifetime);
+    if (status == NUMELYX_CORE_LIFETIME_SUCCESS) return NUMERUS_OPTIMIZER_SUCCESS;
+    if (status == NUMELYX_CORE_LIFETIME_OVERFLOW) return NUMERUS_OPTIMIZER_SIZE_OVERFLOW;
+    return NUMERUS_OPTIMIZER_INVALID_ARGUMENT;
+}
+
 void numelyx_core_optimizer_result_destroy(numelyx_core_optimizer_result *result)
 {
     if (result != NULL) {
-        if (result->parameters != NULL) {
-            numelyx_core_optimizer_free(result->parameters);
-        }
-        numelyx_core_optimizer_free(result);
+        (void) numelyx_core_lifetime_release(&result->lifetime, result);
     }
 }
 

@@ -9,16 +9,17 @@
 
 #ifdef _WIN32
 # include <windows.h>
+# include <process.h>
 typedef struct { HANDLE handle; } test_thread_t;
 typedef int (*test_thread_fn)(void *);
 typedef struct { test_thread_fn function; void *argument; } test_thread_start;
 
-static DWORD WINAPI test_thread_entry(LPVOID pointer)
+static unsigned __stdcall test_thread_entry(void *pointer)
 {
     test_thread_start *start = (test_thread_start *) pointer;
     int result = start->function(start->argument);
     free(start);
-    return (DWORD) result;
+    return (unsigned) result;
 }
 
 static int test_thread_create(
@@ -33,7 +34,9 @@ static int test_thread_create(
     if (start == NULL) return 0;
     start->function = function;
     start->argument = argument;
-    thread->handle = CreateThread(NULL, 0, test_thread_entry, start, 0, NULL);
+    thread->handle = (HANDLE) _beginthreadex(
+        NULL, 0, test_thread_entry, start, 0, NULL
+    );
     if (thread->handle == NULL) {
         free(start);
         return 0;

@@ -173,6 +173,12 @@ numelyx_core_matrix_status numelyx_core_matrix_lu_factorize(
             (lapack_int) size,
             pivots
         );
+        if (info == LAPACK_WORK_MEMORY_ERROR ||
+            info == LAPACK_TRANSPOSE_MEMORY_ERROR) {
+            matrix_lu_free(pivots);
+            numelyx_core_matrix_lu_destroy(result);
+            return NUMERUS_MATRIX_OUT_OF_MEMORY;
+        }
         if (info < 0) {
             matrix_lu_free(pivots);
             numelyx_core_matrix_lu_destroy(result);

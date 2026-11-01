@@ -99,8 +99,8 @@ static void test_scale_aware_threshold(void)
 
 static void test_diagonal_rank_fast_path_contract(void)
 {
-    const double full_values[] = {1e100, 0.0, 0.0, 2e100};
-    const double deficient_values[] = {1.0, 0.0, 0.0, 1e-12};
+    const double full_values[] = {1e100, 2e100};
+    const double deficient_values[] = {1.0, 1e-12};
     const double rectangular_values[] = {0.0, 0.0, 0.0, 3.0, 0.0, 0.0};
     numelyx_core_matrix *matrix = NULL;
     size_t rank = 99;
@@ -124,6 +124,36 @@ static void test_diagonal_rank_fast_path_contract(void)
     ) == NUMERUS_MATRIX_SUCCESS);
     assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
     assert(rank == 1);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_identity(3, &matrix) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 3);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_scaled_identity(3, -4.0, &matrix) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 3);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_scaled_identity(3, 0.0, &matrix) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 0);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_zero(2, 4, &matrix) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 0);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_scaled_identity(0, 7.0, &matrix) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 0);
     numelyx_core_matrix_destroy(matrix);
 
     assert(numelyx_core_matrix_create_identity(3, &matrix) ==

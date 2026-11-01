@@ -8,6 +8,7 @@
  */
 
 #include "numelyx_core_matrix.h"
+#include "numelyx_core_matrix_internal.h"
 #include "numelyx_core_size.h"
 #include "numelyx_core_numeric.h"
 
@@ -593,6 +594,99 @@ numelyx_core_matrix_status numelyx_core_matrix_is_orthogonal(
 }
 
 
+/*
+ * Root diagonal Storage has a compact representation. Rank can be computed
+ * directly from its diagonal without allocating or scanning an O(n^2) dense
+ * work buffer. Derived views deliberately use the generic logical path.
+ */
+static numelyx_core_matrix_status matrix_rank_compact_diagonal(
+    const numelyx_core_matrix *matrix,
+    size_t *rank,
+    bool *handled
+)
+{
+    numelyx_core_storage_kind kind;
+    size_t size;
+    size_t index;
+    size_t rank_result = 0;
+    double scale = 0.0;
+    double relative_threshold;
+
+    *handled = false;
+    if (matrix->storage == NULL || matrix->parent != NULL ||
+        matrix->parent2 != NULL) {
+        return NUMERUS_MATRIX_SUCCESS;
+    }
+
+    kind = numelyx_core_storage_kind_of(matrix->storage);
+    if (kind != NUMERUS_STORAGE_DIAGONAL &&
+        kind != NUMERUS_STORAGE_IDENTITY &&
+        kind != NUMERUS_STORAGE_ZERO &&
+        kind != NUMERUS_STORAGE_SCALED_IDENTITY) {
+        return NUMERUS_MATRIX_SUCCESS;
+    }
+
+    *handled = true;
+    size = numelyx_core_matrix_rows(matrix);
+    if (size == 0) {
+        *rank = 0;
+        return NUMERUS_MATRIX_SUCCESS;
+    }
+
+    if (kind == NUMERUS_STORAGE_ZERO) {
+        *rank = 0;
+        return NUMERUS_MATRIX_SUCCESS;
+    }
+    if (kind == NUMERUS_STORAGE_IDENTITY) {
+        *rank = size;
+        return NUMERUS_MATRIX_SUCCESS;
+    }
+
+    if (kind == NUMERUS_STORAGE_SCALED_IDENTITY) {
+        double value = numelyx_core_storage_get_unchecked(
+            matrix->storage, 0, 0
+        );
+
+        if (!isfinite(value)) {
+            return NUMERUS_MATRIX_NON_FINITE;
+        }
+        *rank = value == 0.0 ? 0 : size;
+        return NUMERUS_MATRIX_SUCCESS;
+    }
+
+    for (index = 0; index < size; index++) {
+        double value = numelyx_core_storage_get_unchecked(
+            matrix->storage, index, index
+        );
+
+        if (!isfinite(value)) {
+            return NUMERUS_MATRIX_NON_FINITE;
+        }
+        if (fabs(value) > scale) {
+            scale = fabs(value);
+        }
+    }
+
+    if (scale == 0.0) {
+        *rank = 0;
+        return NUMERUS_MATRIX_SUCCESS;
+    }
+
+    relative_threshold = NUMERUS_EPSILON * (double) size;
+    for (index = 0; index < size; index++) {
+        double value = numelyx_core_storage_get_unchecked(
+            matrix->storage, index, index
+        );
+
+        if (fabs(value) / scale > relative_threshold) {
+            rank_result++;
+        }
+    }
+
+    *rank = rank_result;
+    return NUMERUS_MATRIX_SUCCESS;
+}
+
 numelyx_core_matrix_status numelyx_core_matrix_rank(
     const numelyx_core_matrix *matrix,
     size_t *rank
@@ -611,9 +705,18 @@ numelyx_core_matrix_status numelyx_core_matrix_rank(
     double scale = 0.0;
     double relative_threshold;
     double *values;
+    bool compact_handled;
+    numelyx_core_matrix_status compact_status;
 
     if (matrix == NULL || rank == NULL) {
         return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+
+    compact_status = matrix_rank_compact_diagonal(
+        matrix, rank, &compact_handled
+    );
+    if (compact_status != NUMERUS_MATRIX_SUCCESS || compact_handled) {
+        return compact_status;
     }
 
     rows = numelyx_core_matrix_rows(matrix);

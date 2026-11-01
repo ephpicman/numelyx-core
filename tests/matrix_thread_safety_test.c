@@ -1,6 +1,7 @@
 #include "../numelyx_core_matrix.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <math.h>
 #include <stdatomic.h>
 #include "test_threads.h"

@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <stdatomic.h>
 #include <stddef.h>
-#include <threads.h>
+#include "test_threads.h"
 
 typedef struct {
     numelyx_core_lifetime lifetime;
@@ -48,7 +48,7 @@ int main(void)
     enum { THREAD_COUNT = 8 };
     test_object object;
     atomic_size_t destroy_count;
-    thrd_t threads[THREAD_COUNT];
+    test_thread_t threads[THREAD_COUNT];
     size_t index;
 
     atomic_init(&destroy_count, 0);
@@ -60,11 +60,11 @@ int main(void)
     ) == NUMELYX_CORE_LIFETIME_SUCCESS);
 
     for (index = 0; index < THREAD_COUNT; index++) {
-        assert(thrd_create(&threads[index], worker, &object) == thrd_success);
+        assert(test_thread_create(&threads[index], worker, &object));
     }
     for (index = 0; index < THREAD_COUNT; index++) {
         int result = -1;
-        assert(thrd_join(threads[index], &result) == thrd_success);
+        assert(test_thread_join(&threads[index], &result));
         assert(result == 0);
     }
 

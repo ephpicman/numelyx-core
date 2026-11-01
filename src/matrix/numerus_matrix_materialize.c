@@ -13,15 +13,8 @@
 
 #include <stdlib.h>
 
-#ifndef NUMERUS_MATRIX_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define numerus_materialize_alloc(size) emalloc(size)
-# define numerus_materialize_free(ptr) efree(ptr)
-#else
 # define numerus_materialize_alloc(size) malloc(size)
 # define numerus_materialize_free(ptr) free(ptr)
-#endif
 
 /**
  * Copy the logical values of any Matrix node into independent dense Storage.

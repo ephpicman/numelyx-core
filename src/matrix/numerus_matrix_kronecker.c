@@ -13,15 +13,8 @@
 
 #include <stdlib.h>
 
-#ifndef NUMERUS_MATRIX_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define numerus_kronecker_alloc(size) emalloc(size)
-# define numerus_kronecker_free(ptr) efree(ptr)
-#else
 # define numerus_kronecker_alloc(size) malloc(size)
 # define numerus_kronecker_free(ptr) free(ptr)
-#endif
 
 /**
  * Compute the Kronecker product A ⊗ B into independent dense Storage.

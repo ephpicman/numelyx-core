@@ -16,15 +16,8 @@
 #include <math.h>
 #include <stdlib.h>
 
-#ifndef NUMERUS_MATRIX_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define matrix_classify_alloc(size) emalloc(size)
-# define matrix_classify_free(pointer) efree(pointer)
-#else
 # define matrix_classify_alloc(size) malloc(size)
 # define matrix_classify_free(pointer) free(pointer)
-#endif
 
 numerus_matrix_status numerus_matrix_classify_system(
     const numerus_matrix *matrix,

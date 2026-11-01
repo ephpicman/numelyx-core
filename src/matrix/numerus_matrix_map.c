@@ -11,15 +11,8 @@
 #include "numerus_matrix.h"
 #include "numerus_size.h"
 #include <stdlib.h>
-#ifndef NUMERUS_MATRIX_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define map_alloc(size) emalloc(size)
-# define map_free(pointer) efree(pointer)
-#else
 # define map_alloc(size) malloc(size)
 # define map_free(pointer) free(pointer)
-#endif
 
 int numerus_matrix_create_map(const numerus_matrix *parent,
     numerus_value_transform_fn transform, const void *context,

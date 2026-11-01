@@ -14,15 +14,8 @@
 #include <math.h>
 #include <stdlib.h>
 
-#ifndef NUMERUS_MATRIX_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define symmetric_function_alloc(size) emalloc(size)
-# define symmetric_function_free(pointer) efree(pointer)
-#else
 # define symmetric_function_alloc(size) malloc(size)
 # define symmetric_function_free(pointer) free(pointer)
-#endif
 
 typedef enum {
     SYMMETRIC_FUNCTION_SQUARE_ROOT = 0,

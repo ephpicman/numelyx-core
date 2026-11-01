@@ -11,15 +11,8 @@
 #include "numerus_size.h"
 #include <math.h>
 #include <stdlib.h>
-#ifndef NUMERUS_MATRIX_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define normalize_alloc(size) emalloc(size)
-# define normalize_free(pointer) efree(pointer)
-#else
 # define normalize_alloc(size) malloc(size)
 # define normalize_free(pointer) free(pointer)
-#endif
 
 static double vector_norm(const double *values, size_t rows, size_t columns,
     numerus_matrix_normalize_axis axis, numerus_matrix_normalize_norm norm,

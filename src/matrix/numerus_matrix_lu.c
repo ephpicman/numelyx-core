@@ -14,15 +14,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#ifndef NUMERUS_MATRIX_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define matrix_lu_alloc(size) emalloc(size)
-# define matrix_lu_free(ptr) efree(ptr)
-#else
 # define matrix_lu_alloc(size) malloc(size)
 # define matrix_lu_free(ptr) free(ptr)
-#endif
 
 struct numerus_matrix_lu_factorization {
     size_t size;

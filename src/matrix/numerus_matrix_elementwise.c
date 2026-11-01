@@ -12,15 +12,8 @@
 #include "numerus_size.h"
 #include <math.h>
 #include <stdlib.h>
-#ifndef NUMERUS_MATRIX_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define elementwise_alloc(size) emalloc(size)
-# define elementwise_free(pointer) efree(pointer)
-#else
 # define elementwise_alloc(size) malloc(size)
 # define elementwise_free(pointer) free(pointer)
-#endif
 
 typedef enum { ELEMENTWISE_MIN, ELEMENTWISE_MAX } elementwise_operation;
 

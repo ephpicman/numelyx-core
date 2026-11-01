@@ -14,15 +14,8 @@
 #include <math.h>
 #include <stdlib.h>
 
-#ifndef NUMERUS_MATRIX_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define numerus_exponential_alloc(size) emalloc(size)
-# define numerus_exponential_free(ptr) efree(ptr)
-#else
 # define numerus_exponential_alloc(size) malloc(size)
 # define numerus_exponential_free(ptr) free(ptr)
-#endif
 
 /* The order-13 Padé approximant is used after scaling the matrix so its
  * one-norm is at most theta_13; the selected exponent is undone by repeated

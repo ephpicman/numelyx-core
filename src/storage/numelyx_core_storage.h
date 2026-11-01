@@ -221,6 +221,9 @@ double numelyx_core_storage_get_unchecked(
     size_t column
 );
 
+/** Retain an immutable Storage reference; caller must already hold a valid reference. */
+int numelyx_core_storage_retain(numelyx_core_storage *storage);
+
 /**
  * @brief Release an immutable Storage object and its owned buffers.
  *

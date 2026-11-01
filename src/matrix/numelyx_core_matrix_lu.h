@@ -13,7 +13,9 @@ typedef struct numelyx_core_matrix_lu_factorization numelyx_core_matrix_lu_facto
  * Factor a square Matrix using Gaussian elimination with partial pivoting.
  *
  * The factorization owns a packed LU buffer and a row permutation and is
- * reference-counted. It does not retain the source Matrix. A zero pivot is
+ * reference-counted with atomic lifetime management. Concurrent retain/release
+ * is supported when each caller already owns a valid reference. It does not
+ * retain the source Matrix. A zero pivot is
  * skipped rather than treated as an API failure; rank counts non-zero pivots
  * under this exact-zero policy. On failure, *factorization remains NULL.
  */

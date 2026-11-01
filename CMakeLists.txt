@@ -28,34 +28,50 @@ find_package(LAPACK REQUIRED)
 # Numerically dense kernels use the CBLAS interface. Keep the vendor ABI
 # behind CBLAS rather than calling compiler-specific Fortran symbols.
 find_path(NUMELYX_CBLAS_INCLUDE_DIR NAMES cblas.h)
-if(NOT NUMELYX_CBLAS_INCLUDE_DIR)
-    message(FATAL_ERROR "A CBLAS implementation (cblas.h) is required")
+find_path(NUMELYX_LAPACKE_INCLUDE_DIR NAMES lapacke.h)
+find_library(NUMELYX_LAPACKE_LIBRARY NAMES lapacke)
+if(NOT NUMELYX_CBLAS_INCLUDE_DIR OR
+   NOT NUMELYX_LAPACKE_INCLUDE_DIR OR
+   NOT NUMELYX_LAPACKE_LIBRARY)
+    message(FATAL_ERROR
+        "Numelyx Core requires CBLAS and LAPACKE development headers/libraries")
 endif()
 
 include(CheckCSourceCompiles)
-set(CMAKE_REQUIRED_INCLUDES "${NUMELYX_CBLAS_INCLUDE_DIR}")
-set(CMAKE_REQUIRED_LIBRARIES "${BLAS_LIBRARIES}")
+set(CMAKE_REQUIRED_INCLUDES
+    "${NUMELYX_CBLAS_INCLUDE_DIR};${NUMELYX_LAPACKE_INCLUDE_DIR}")
+set(CMAKE_REQUIRED_LIBRARIES
+    "${NUMELYX_LAPACKE_LIBRARY};${LAPACK_LIBRARIES};${BLAS_LIBRARIES}")
 check_c_source_compiles("
     #include <cblas.h>
+    #include <lapacke.h>
     int main(void) {
         double a = 1.0, b = 1.0, c = 0.0;
+        lapack_int pivot = 0;
         cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
                     1, 1, 1, 1.0, &a, 1, &b, 1, 0.0, &c, 1);
-        return c == 1.0 ? 0 : 1;
+        return LAPACKE_dgetrf(LAPACK_ROW_MAJOR, 1, 1, &a, 1, &pivot);
     }
-" NUMELYX_CBLAS_LINKS)
+" NUMELYX_CBLAS_LAPACKE_LINKS)
 unset(CMAKE_REQUIRED_INCLUDES)
 unset(CMAKE_REQUIRED_LIBRARIES)
-if(NOT NUMELYX_CBLAS_LINKS)
-    message(FATAL_ERROR "The selected BLAS library must provide the CBLAS API")
+if(NOT NUMELYX_CBLAS_LAPACKE_LINKS)
+    message(FATAL_ERROR "The selected BLAS/LAPACK libraries must provide working CBLAS and LAPACKE APIs")
 endif()
 
-target_include_directories(numelyx_core PRIVATE "${NUMELYX_CBLAS_INCLUDE_DIR}")
-target_compile_definitions(numelyx_core PRIVATE NUMELYX_HAVE_CBLAS=1)
+target_include_directories(numelyx_core PRIVATE
+    "${NUMELYX_CBLAS_INCLUDE_DIR}"
+    "${NUMELYX_LAPACKE_INCLUDE_DIR}"
+)
+target_compile_definitions(numelyx_core PRIVATE
+    NUMELYX_HAVE_CBLAS=1
+    NUMELYX_HAVE_LAPACKE=1
+)
 target_link_libraries(numelyx_core PUBLIC
     Threads::Threads
-    ${BLAS_LIBRARIES}
+    ${NUMELYX_LAPACKE_LIBRARY}
     ${LAPACK_LIBRARIES}
+    ${BLAS_LIBRARIES}
 )
 
 if(NUMELYX_ENABLE_TSAN)

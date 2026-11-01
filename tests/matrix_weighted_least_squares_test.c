@@ -8,13 +8,13 @@
  * documentation. This file is test support, not runtime code.
  */
 
-#include "../numerus_matrix.h"
+#include "../numelyx_core_matrix.h"
 
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 
-static numerus_matrix_status fail_on_row_one(
+static numelyx_core_matrix_status fail_on_row_one(
     size_t row,
     size_t column,
     size_t *parent_row,
@@ -41,36 +41,36 @@ static void test_equal_weights_match_ordinary_least_squares(void)
     };
     const double rhs_values[] = {1, 2, 4};
     const double weights[] = {1, 1, 1};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *ordinary = NULL;
-    numerus_matrix *weighted = NULL;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *ordinary = NULL;
+    numelyx_core_matrix *weighted = NULL;
     size_t row;
 
-    assert(numerus_matrix_create_dense(3, 2, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(3, 1, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(3, 1, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_least_squares(matrix, rhs, &ordinary) ==
+    assert(numelyx_core_matrix_least_squares(matrix, rhs, &ordinary) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         matrix, rhs, weights, 3, &weighted
     ) == NUMERUS_MATRIX_SUCCESS);
 
     for (row = 0; row < 2; row++) {
         double left;
         double right;
-        assert(numerus_matrix_get(ordinary, row, 0, &left) ==
+        assert(numelyx_core_matrix_get(ordinary, row, 0, &left) ==
             NUMERUS_MATRIX_SUCCESS);
-        assert(numerus_matrix_get(weighted, row, 0, &right) ==
+        assert(numelyx_core_matrix_get(weighted, row, 0, &right) ==
             NUMERUS_MATRIX_SUCCESS);
         assert(fabs(left - right) < 1e-10);
     }
 
-    numerus_matrix_destroy(weighted);
-    numerus_matrix_destroy(ordinary);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(weighted);
+    numelyx_core_matrix_destroy(ordinary);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_zero_weight_excludes_observation(void)
@@ -82,28 +82,28 @@ static void test_zero_weight_excludes_observation(void)
     };
     const double rhs_values[] = {1, 2, 100};
     const double weights[] = {1, 1, 0};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *solution = NULL;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = NULL;
     double value;
 
-    assert(numerus_matrix_create_dense(3, 2, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(3, 1, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(3, 1, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         matrix, rhs, weights, 3, &solution
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_get(solution, 0, 0, &value) ==
+    assert(numelyx_core_matrix_get(solution, 0, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 1.0) < 1e-10);
-    assert(numerus_matrix_get(solution, 1, 0, &value) ==
+    assert(numelyx_core_matrix_get(solution, 1, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 2.0) < 1e-10);
 
-    numerus_matrix_destroy(solution);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(solution);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_unequal_weights_and_multiple_rhs(void)
@@ -119,16 +119,16 @@ static void test_unequal_weights_and_multiple_rhs(void)
         4, 8
     };
     const double weights[] = {1, 2, 3};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *solution = NULL;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = NULL;
     double value;
 
-    assert(numerus_matrix_create_dense(3, 2, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(3, 2, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         matrix, rhs, weights, 3, &solution
     ) == NUMERUS_MATRIX_SUCCESS);
 
@@ -136,24 +136,24 @@ static void test_unequal_weights_and_multiple_rhs(void)
      * The second RHS is twice the first, so its coefficient column doubles.
      * This catches implementations that accidentally ignore unequal weights.
      */
-    assert(numerus_matrix_rows(solution) == 2);
-    assert(numerus_matrix_columns(solution) == 2);
-    assert(numerus_matrix_get(solution, 0, 0, &value) ==
+    assert(numelyx_core_matrix_rows(solution) == 2);
+    assert(numelyx_core_matrix_columns(solution) == 2);
+    assert(numelyx_core_matrix_get(solution, 0, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 17.0 / 11.0) < 1e-9);
-    assert(numerus_matrix_get(solution, 1, 0, &value) ==
+    assert(numelyx_core_matrix_get(solution, 1, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 25.0 / 11.0) < 1e-9);
-    assert(numerus_matrix_get(solution, 0, 1, &value) ==
+    assert(numelyx_core_matrix_get(solution, 0, 1, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 34.0 / 11.0) < 1e-9);
-    assert(numerus_matrix_get(solution, 1, 1, &value) ==
+    assert(numelyx_core_matrix_get(solution, 1, 1, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 50.0 / 11.0) < 1e-9);
 
-    numerus_matrix_destroy(solution);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(solution);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_infinite_weight_is_rejected(void)
@@ -161,21 +161,21 @@ static void test_infinite_weight_is_rejected(void)
     const double matrix_values[] = {1, 0, 0, 1, 1, 1};
     const double rhs_values[] = {1, 2, 4};
     const double weights[] = {1, INFINITY, 1};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *solution = (void *) 1;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = (void *) 1;
 
-    assert(numerus_matrix_create_dense(3, 2, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(3, 1, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(3, 1, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         matrix, rhs, weights, 3, &solution
     ) == NUMERUS_MATRIX_NON_FINITE);
     assert(solution == NULL);
 
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_validation_and_rank_failure(void)
@@ -185,37 +185,37 @@ static void test_validation_and_rank_failure(void)
     const double bad_weights[] = {1, -1, 1};
     const double nan_weights[] = {1, NAN, 1};
     const double zero_weights[] = {1, 0, 0};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *solution = (void *) 1;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = (void *) 1;
 
-    assert(numerus_matrix_create_dense(3, 2, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(3, 1, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(3, 1, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
 
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         matrix, rhs, bad_weights, 3, &solution
     ) == NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(solution == NULL);
 
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         matrix, rhs, nan_weights, 3, &solution
     ) == NUMERUS_MATRIX_NON_FINITE);
     assert(solution == NULL);
 
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         matrix, rhs, zero_weights, 2, &solution
     ) == NUMERUS_MATRIX_DIMENSION_MISMATCH);
     assert(solution == NULL);
 
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         matrix, rhs, zero_weights, 3, &solution
     ) == NUMERUS_MATRIX_RANK_DEFICIENT);
     assert(solution == NULL);
 
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_rhs_dimension_and_nonfinite_data(void)
@@ -226,45 +226,45 @@ static void test_rhs_dimension_and_nonfinite_data(void)
     const double weights[] = {1, 2, 3};
     const double nonfinite_matrix_values[] = {1, 0, 0, 1, NAN, 1};
     const double nonfinite_rhs_values[] = {1, INFINITY, 4};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *short_rhs = NULL;
-    numerus_matrix *bad_matrix = NULL;
-    numerus_matrix *bad_rhs = NULL;
-    numerus_matrix *solution = (void *) 1;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *short_rhs = NULL;
+    numelyx_core_matrix *bad_matrix = NULL;
+    numelyx_core_matrix *bad_rhs = NULL;
+    numelyx_core_matrix *solution = (void *) 1;
 
-    assert(numerus_matrix_create_dense(3, 2, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(3, 1, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(3, 1, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(2, 1, short_rhs_values, &short_rhs) ==
+    assert(numelyx_core_matrix_create_dense(2, 1, short_rhs_values, &short_rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         matrix, short_rhs, weights, 3, &solution
     ) == NUMERUS_MATRIX_DIMENSION_MISMATCH);
     assert(solution == NULL);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         3, 2, nonfinite_matrix_values, &bad_matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         bad_matrix, rhs, weights, 3, &solution
     ) == NUMERUS_MATRIX_NON_FINITE);
     assert(solution == NULL);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         3, 1, nonfinite_rhs_values, &bad_rhs
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         matrix, bad_rhs, weights, 3, &solution
     ) == NUMERUS_MATRIX_NON_FINITE);
     assert(solution == NULL);
 
-    numerus_matrix_destroy(bad_rhs);
-    numerus_matrix_destroy(bad_matrix);
-    numerus_matrix_destroy(short_rhs);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(bad_rhs);
+    numelyx_core_matrix_destroy(bad_matrix);
+    numelyx_core_matrix_destroy(short_rhs);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_nonfinite_and_read_failures(void)
@@ -272,26 +272,26 @@ static void test_nonfinite_and_read_failures(void)
     const double matrix_values[] = {1, 0, 0, 1, 1, 1};
     const double rhs_values[] = {1, 2, 3};
     const double weights[] = {1, 1, 1};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *rhs = NULL;
-    numerus_matrix *failing = NULL;
-    numerus_matrix *solution = (void *) 1;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *failing = NULL;
+    numelyx_core_matrix *solution = (void *) 1;
 
-    assert(numerus_matrix_create_dense(3, 2, matrix_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, matrix_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(3, 1, rhs_values, &rhs) ==
+    assert(numelyx_core_matrix_create_dense(3, 1, rhs_values, &rhs) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_from_parent_with_transforms(
+    assert(numelyx_core_matrix_create_from_parent_with_transforms(
         matrix, 3, 2, fail_on_row_one, NULL, NULL, &failing
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_weighted_least_squares(
+    assert(numelyx_core_matrix_weighted_least_squares(
         failing, rhs, weights, 3, &solution
     ) == NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(solution == NULL);
 
-    numerus_matrix_destroy(failing);
-    numerus_matrix_destroy(rhs);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(failing);
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 int main(void)

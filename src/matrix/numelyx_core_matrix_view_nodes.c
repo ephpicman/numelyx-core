@@ -1341,13 +1341,13 @@ int numelyx_core_matrix_create_binary_view(
 
     status = numelyx_core_matrix_retain(left);
     if (status != NUMERUS_MATRIX_SUCCESS) {
-        numelyx_core_matrix_free(result);
+        numelyx_core_matrix_destroy(result);
         return status;
     }
     status = numelyx_core_matrix_retain(right);
     if (status != NUMERUS_MATRIX_SUCCESS) {
         numelyx_core_matrix_destroy(left);
-        numelyx_core_matrix_free(result);
+        numelyx_core_matrix_destroy(result);
         return status;
     }
 
@@ -1417,13 +1417,13 @@ static int numelyx_core_matrix_create_join(
 
     status = numelyx_core_matrix_retain(parent);
     if (status != NUMERUS_MATRIX_SUCCESS) {
-        numelyx_core_matrix_free(result);
+        numelyx_core_matrix_destroy(result);
         return status;
     }
     status = numelyx_core_matrix_retain(parent2);
     if (status != NUMERUS_MATRIX_SUCCESS) {
         numelyx_core_matrix_destroy(parent);
-        numelyx_core_matrix_free(result);
+        numelyx_core_matrix_destroy(result);
         return status;
     }
 

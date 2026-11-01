@@ -2,11 +2,14 @@
 
 #include <assert.h>
 #include <math.h>
+#include <stdatomic.h>
 #include <stddef.h>
 #include "test_threads.h"
 
 typedef struct {
     numelyx_core_rng *rng;
+    atomic_size_t *ready;
+    atomic_bool *start;
     int failed;
 } rng_worker_args;
 
@@ -15,7 +18,12 @@ static int rng_worker(void *argument)
     rng_worker_args *args = (rng_worker_args *) argument;
     size_t iteration;
 
-    for (iteration = 0; iteration < 1000; iteration++) {
+    atomic_fetch_add_explicit(args->ready, 1, memory_order_release);
+    while (!atomic_load_explicit(args->start, memory_order_acquire)) {
+        /* Start all users of the shared RNG together. */
+    }
+
+    for (iteration = 0; iteration < 3000; iteration++) {
         uint32_t raw;
         double uniform;
         double normal;
@@ -53,16 +61,28 @@ int main(void)
     numelyx_core_rng *rng = NULL;
     rng_worker_args arguments[THREAD_COUNT];
     test_thread_t threads[THREAD_COUNT];
+    atomic_size_t ready;
+    atomic_bool start;
     size_t index;
+
+    atomic_init(&ready, 0);
+    atomic_init(&start, false);
 
     assert(numelyx_core_rng_create(12345, 6789, &rng) == NUMERUS_RNG_SUCCESS);
 
     for (index = 0; index < THREAD_COUNT; index++) {
         arguments[index].rng = rng;
+        arguments[index].ready = &ready;
+        arguments[index].start = &start;
         arguments[index].failed = 0;
         assert(numelyx_core_rng_retain(rng) == NUMERUS_RNG_SUCCESS);
         assert(test_thread_create(&threads[index], rng_worker, &arguments[index]));
     }
+
+    while (atomic_load_explicit(&ready, memory_order_acquire) != THREAD_COUNT) {
+        /* Every worker owns a reference before concurrent use begins. */
+    }
+    atomic_store_explicit(&start, true, memory_order_release);
 
     for (index = 0; index < THREAD_COUNT; index++) {
         int result = -1;

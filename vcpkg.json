@@ -1,0 +1,12 @@
+{
+  "name": "numelyx-core",
+  "version-string": "0.1.0",
+  "dependencies": [
+    {
+      "name": "lapack-reference",
+      "features": [
+        "cblas"
+      ]
+    }
+  ]
+}

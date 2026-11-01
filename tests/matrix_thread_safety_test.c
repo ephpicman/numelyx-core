@@ -2,7 +2,7 @@
 
 #include <assert.h>
 #include <math.h>
-#include <threads.h>
+#include "test_threads.h"
 
 typedef struct {
     numelyx_core_matrix *matrix;
@@ -49,7 +49,7 @@ int main(void)
     };
     numelyx_core_matrix *matrix = NULL;
     worker_args arguments[THREAD_COUNT];
-    thrd_t threads[THREAD_COUNT];
+    test_thread_t threads[THREAD_COUNT];
     size_t index;
 
     assert(numelyx_core_matrix_create_dense(3, 3, values, &matrix) ==
@@ -59,14 +59,14 @@ int main(void)
         arguments[index].matrix = matrix;
         arguments[index].failed = 0;
         assert(numelyx_core_matrix_retain(matrix) == NUMERUS_MATRIX_SUCCESS);
-        assert(thrd_create(
+        assert(test_thread_create(
             &threads[index], cache_worker, &arguments[index]
-        ) == thrd_success);
+        ));
     }
 
     for (index = 0; index < THREAD_COUNT; index++) {
         int result = -1;
-        assert(thrd_join(threads[index], &result) == thrd_success);
+        assert(test_thread_join(&threads[index], &result));
         assert(result == 0);
         assert(arguments[index].failed == 0);
     }

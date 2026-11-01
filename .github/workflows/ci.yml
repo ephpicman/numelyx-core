@@ -34,6 +34,7 @@ jobs:
           create-args: >-
             -c conda-forge
             liblapacke
+            blas-devel
       - name: Configure (Ubuntu)
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DNUMELYX_BUILD_TESTS=ON

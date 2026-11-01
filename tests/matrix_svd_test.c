@@ -8,13 +8,13 @@
  * documentation. This file is test support, not runtime code.
  */
 
-#include "../numerus_matrix.h"
+#include "../numelyx_core_matrix.h"
 
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 
-static numerus_matrix_status fail_on_row_one(
+static numelyx_core_matrix_status fail_on_row_one(
     size_t row,
     size_t column,
     size_t *parent_row,
@@ -31,30 +31,30 @@ static numerus_matrix_status fail_on_row_one(
 }
 
 static void assert_svd(
-    const numerus_matrix *matrix,
-    const numerus_matrix *u,
-    const numerus_matrix *singular,
-    const numerus_matrix *vt,
+    const numelyx_core_matrix *matrix,
+    const numelyx_core_matrix *u,
+    const numelyx_core_matrix *singular,
+    const numelyx_core_matrix *vt,
     double tolerance
 )
 {
-    size_t rows = numerus_matrix_rows(matrix);
-    size_t columns = numerus_matrix_columns(matrix);
+    size_t rows = numelyx_core_matrix_rows(matrix);
+    size_t columns = numelyx_core_matrix_columns(matrix);
     size_t k = rows < columns ? rows : columns;
     size_t row;
     size_t column;
     double previous = INFINITY;
 
-    assert(numerus_matrix_rows(u) == rows);
-    assert(numerus_matrix_columns(u) == k);
-    assert(numerus_matrix_rows(singular) == k);
-    assert(numerus_matrix_columns(singular) == 1);
-    assert(numerus_matrix_rows(vt) == k);
-    assert(numerus_matrix_columns(vt) == columns);
+    assert(numelyx_core_matrix_rows(u) == rows);
+    assert(numelyx_core_matrix_columns(u) == k);
+    assert(numelyx_core_matrix_rows(singular) == k);
+    assert(numelyx_core_matrix_columns(singular) == 1);
+    assert(numelyx_core_matrix_rows(vt) == k);
+    assert(numelyx_core_matrix_columns(vt) == columns);
 
     for (column = 0; column < k; column++) {
         double value;
-        assert(numerus_matrix_get(singular, column, 0, &value) ==
+        assert(numelyx_core_matrix_get(singular, column, 0, &value) ==
             NUMERUS_MATRIX_SUCCESS);
         assert(value >= 0.0);
         assert(value <= previous + tolerance);
@@ -71,16 +71,16 @@ static void assert_svd(
                 double u_value;
                 double s_value;
                 double vt_value;
-                assert(numerus_matrix_get(u, row, index, &u_value) ==
+                assert(numelyx_core_matrix_get(u, row, index, &u_value) ==
                     NUMERUS_MATRIX_SUCCESS);
-                assert(numerus_matrix_get(singular, index, 0, &s_value) ==
+                assert(numelyx_core_matrix_get(singular, index, 0, &s_value) ==
                     NUMERUS_MATRIX_SUCCESS);
-                assert(numerus_matrix_get(vt, index, column, &vt_value) ==
+                assert(numelyx_core_matrix_get(vt, index, column, &vt_value) ==
                     NUMERUS_MATRIX_SUCCESS);
                 product += u_value * s_value * vt_value;
             }
 
-            assert(numerus_matrix_get(matrix, row, column, &expected) ==
+            assert(numelyx_core_matrix_get(matrix, row, column, &expected) ==
                 NUMERUS_MATRIX_SUCCESS);
             assert(fabs(product - expected) <=
                 tolerance * (1.0 + fabs(expected)));
@@ -96,18 +96,18 @@ static void assert_svd(
             for (index = 0; index < rows; index++) {
                 double left;
                 double right;
-                assert(numerus_matrix_get(u, index, row, &left) ==
+                assert(numelyx_core_matrix_get(u, index, row, &left) ==
                     NUMERUS_MATRIX_SUCCESS);
-                assert(numerus_matrix_get(u, index, column, &right) ==
+                assert(numelyx_core_matrix_get(u, index, column, &right) ==
                     NUMERUS_MATRIX_SUCCESS);
                 u_dot += left * right;
             }
             for (index = 0; index < columns; index++) {
                 double left;
                 double right;
-                assert(numerus_matrix_get(vt, row, index, &left) ==
+                assert(numelyx_core_matrix_get(vt, row, index, &left) ==
                     NUMERUS_MATRIX_SUCCESS);
-                assert(numerus_matrix_get(vt, column, index, &right) ==
+                assert(numelyx_core_matrix_get(vt, column, index, &right) ==
                     NUMERUS_MATRIX_SUCCESS);
                 vt_dot += left * right;
             }
@@ -126,97 +126,97 @@ static void test_tall_and_wide_matrices(void)
         2, -1, 1
     };
     const double wide_values[] = {1, 2, 3, 4, 5, 6};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *u = NULL;
-    numerus_matrix *singular = NULL;
-    numerus_matrix *vt = NULL;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *u = NULL;
+    numelyx_core_matrix *singular = NULL;
+    numelyx_core_matrix *vt = NULL;
 
-    assert(numerus_matrix_create_dense(4, 3, tall_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(4, 3, tall_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_svd(matrix, &u, &singular, &vt) ==
+    assert(numelyx_core_matrix_svd(matrix, &u, &singular, &vt) ==
         NUMERUS_MATRIX_SUCCESS);
     assert_svd(matrix, u, singular, vt, 1e-8);
-    numerus_matrix_destroy(vt);
-    numerus_matrix_destroy(singular);
-    numerus_matrix_destroy(u);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(vt);
+    numelyx_core_matrix_destroy(singular);
+    numelyx_core_matrix_destroy(u);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(2, 3, wide_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 3, wide_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_svd(matrix, &u, &singular, &vt) ==
+    assert(numelyx_core_matrix_svd(matrix, &u, &singular, &vt) ==
         NUMERUS_MATRIX_SUCCESS);
     assert_svd(matrix, u, singular, vt, 1e-8);
-    numerus_matrix_destroy(vt);
-    numerus_matrix_destroy(singular);
-    numerus_matrix_destroy(u);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(vt);
+    numelyx_core_matrix_destroy(singular);
+    numelyx_core_matrix_destroy(u);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_rank_deficient_and_zero_matrices(void)
 {
     const double deficient_values[] = {1, 2, 2, 4, 3, 6};
     const double zero_values[] = {0, 0, 0, 0, 0, 0};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *u = NULL;
-    numerus_matrix *singular = NULL;
-    numerus_matrix *vt = NULL;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *u = NULL;
+    numelyx_core_matrix *singular = NULL;
+    numelyx_core_matrix *vt = NULL;
 
-    assert(numerus_matrix_create_dense(3, 2, deficient_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, deficient_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_svd(matrix, &u, &singular, &vt) ==
+    assert(numelyx_core_matrix_svd(matrix, &u, &singular, &vt) ==
         NUMERUS_MATRIX_SUCCESS);
     assert_svd(matrix, u, singular, vt, 1e-8);
-    numerus_matrix_destroy(vt);
-    numerus_matrix_destroy(singular);
-    numerus_matrix_destroy(u);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(vt);
+    numelyx_core_matrix_destroy(singular);
+    numelyx_core_matrix_destroy(u);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(3, 2, zero_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, zero_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_svd(matrix, &u, &singular, &vt) ==
+    assert(numelyx_core_matrix_svd(matrix, &u, &singular, &vt) ==
         NUMERUS_MATRIX_SUCCESS);
     assert_svd(matrix, u, singular, vt, 1e-8);
-    numerus_matrix_destroy(vt);
-    numerus_matrix_destroy(singular);
-    numerus_matrix_destroy(u);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(vt);
+    numelyx_core_matrix_destroy(singular);
+    numelyx_core_matrix_destroy(u);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_failure_contracts(void)
 {
     const double values[] = {1, 2, 3, 4};
     const double nonfinite_values[] = {1, NAN, 3, 4};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *failing = NULL;
-    numerus_matrix *u = (void *) 1;
-    numerus_matrix *singular = (void *) 1;
-    numerus_matrix *vt = (void *) 1;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *failing = NULL;
+    numelyx_core_matrix *u = (void *) 1;
+    numelyx_core_matrix *singular = (void *) 1;
+    numelyx_core_matrix *vt = (void *) 1;
 
-    assert(numerus_matrix_svd(NULL, &u, &singular, &vt) ==
+    assert(numelyx_core_matrix_svd(NULL, &u, &singular, &vt) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(u == NULL && singular == NULL && vt == NULL);
-    assert(numerus_matrix_svd(NULL, &u, &u, &vt) ==
+    assert(numelyx_core_matrix_svd(NULL, &u, &u, &vt) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(u == NULL && vt == NULL);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         2, 2, nonfinite_values, &matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_svd(matrix, &u, &singular, &vt) ==
+    assert(numelyx_core_matrix_svd(matrix, &u, &singular, &vt) ==
         NUMERUS_MATRIX_NON_FINITE);
     assert(u == NULL && singular == NULL && vt == NULL);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(2, 2, values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_from_parent_with_transforms(
+    assert(numelyx_core_matrix_create_from_parent_with_transforms(
         matrix, 2, 2, fail_on_row_one, NULL, NULL, &failing
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_svd(failing, &u, &singular, &vt) ==
+    assert(numelyx_core_matrix_svd(failing, &u, &singular, &vt) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(u == NULL && singular == NULL && vt == NULL);
-    numerus_matrix_destroy(failing);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(failing);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 int main(void)

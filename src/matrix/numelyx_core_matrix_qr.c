@@ -159,8 +159,13 @@ static numelyx_core_matrix_status matrix_qr_decompose_internal(
 
         for (row = 0; row < k; row++) {
             for (column = 0; column < columns; column++) {
-                r_values[row * columns + column] =
-                    row <= column ? work[row * columns + column] : 0.0;
+                double value = row <= column
+                    ? work[row * columns + column] : 0.0;
+                if (!isfinite(value)) {
+                    status = NUMERUS_MATRIX_NON_FINITE;
+                    goto cleanup;
+                }
+                r_values[row * columns + column] = value;
             }
         }
 
@@ -183,8 +188,7 @@ static numelyx_core_matrix_status matrix_qr_decompose_internal(
         for (row = 0; row < rows; row++) {
             for (column = 0; column < k; column++) {
                 double value = work[row * columns + column];
-                if (!isfinite(value) ||
-                    !isfinite(r_values[row * columns + column])) {
+                if (!isfinite(value)) {
                     status = NUMERUS_MATRIX_NON_FINITE;
                     goto cleanup;
                 }

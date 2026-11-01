@@ -13,7 +13,10 @@
 #include "numelyx_core_size.h"
 
 #include <math.h>
+#include <limits.h>
 #include <stdlib.h>
+
+#include <lapacke.h>
 
 # define matrix_svd_alloc(size) malloc(size)
 # define matrix_svd_free(pointer) free(pointer)
@@ -344,6 +347,145 @@ cleanup:
     return status;
 }
 
+static numelyx_core_matrix_status matrix_svd_lapack(
+    const numelyx_core_matrix *matrix,
+    size_t rows,
+    size_t columns,
+    numelyx_core_matrix **u,
+    numelyx_core_matrix **singular_values,
+    numelyx_core_matrix **vt
+)
+{
+    size_t k = rows < columns ? rows : columns;
+    size_t a_count;
+    size_t u_count;
+    size_t vt_count;
+    size_t a_bytes;
+    size_t u_bytes;
+    size_t vt_bytes;
+    size_t singular_bytes;
+    size_t row;
+    size_t column;
+    double *a = NULL;
+    double *singular = NULL;
+    double *u_data = NULL;
+    double *vt_data = NULL;
+    lapack_int info;
+    numelyx_core_matrix_status status = NUMERUS_MATRIX_SUCCESS;
+
+    if (rows > (size_t) INT_MAX || columns > (size_t) INT_MAX) {
+        return NUMERUS_MATRIX_NO_CONVERGENCE;
+    }
+    if (!numelyx_core_size_multiply(rows, columns, &a_count) ||
+        !numelyx_core_size_multiply(a_count, sizeof(*a), &a_bytes) ||
+        !numelyx_core_size_multiply(rows, k, &u_count) ||
+        !numelyx_core_size_multiply(u_count, sizeof(*u_data), &u_bytes) ||
+        !numelyx_core_size_multiply(k, columns, &vt_count) ||
+        !numelyx_core_size_multiply(vt_count, sizeof(*vt_data), &vt_bytes) ||
+        !numelyx_core_size_multiply(k, sizeof(*singular), &singular_bytes)) {
+        return NUMERUS_MATRIX_OVERFLOW;
+    }
+
+    a = matrix_svd_alloc(a_bytes);
+    singular = matrix_svd_alloc(singular_bytes);
+    u_data = matrix_svd_alloc(u_bytes);
+    vt_data = matrix_svd_alloc(vt_bytes);
+    if (a == NULL || singular == NULL || u_data == NULL || vt_data == NULL) {
+        status = NUMERUS_MATRIX_OUT_OF_MEMORY;
+        goto cleanup;
+    }
+
+    for (row = 0; row < rows; row++) {
+        for (column = 0; column < columns; column++) {
+            double value;
+            status = numelyx_core_matrix_get(matrix, row, column, &value);
+            if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+            if (!isfinite(value)) {
+                status = NUMERUS_MATRIX_NON_FINITE;
+                goto cleanup;
+            }
+            a[row * columns + column] = value;
+        }
+    }
+
+    info = LAPACKE_dgesdd(
+        LAPACK_ROW_MAJOR,
+        'S',
+        (lapack_int) rows,
+        (lapack_int) columns,
+        a,
+        (lapack_int) columns,
+        singular,
+        u_data,
+        (lapack_int) k,
+        vt_data,
+        (lapack_int) columns
+    );
+    if (info == LAPACK_WORK_MEMORY_ERROR ||
+        info == LAPACK_TRANSPOSE_MEMORY_ERROR) {
+        status = NUMERUS_MATRIX_OUT_OF_MEMORY;
+        goto cleanup;
+    }
+    if (info > 0) {
+        status = NUMERUS_MATRIX_NO_CONVERGENCE;
+        goto cleanup;
+    }
+    if (info < 0) {
+        status = NUMERUS_MATRIX_INVALID_ARGUMENT;
+        goto cleanup;
+    }
+
+    for (row = 0; row < k; row++) {
+        if (!isfinite(singular[row])) {
+            status = NUMERUS_MATRIX_NON_FINITE;
+            goto cleanup;
+        }
+    }
+    for (row = 0; row < u_count; row++) {
+        if (!isfinite(u_data[row])) {
+            status = NUMERUS_MATRIX_NON_FINITE;
+            goto cleanup;
+        }
+    }
+    for (row = 0; row < vt_count; row++) {
+        if (!isfinite(vt_data[row])) {
+            status = NUMERUS_MATRIX_NON_FINITE;
+            goto cleanup;
+        }
+    }
+
+    status = (numelyx_core_matrix_status) numelyx_core_matrix_create_dense(
+        rows, k, u_data, u
+    );
+    if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+
+    status = (numelyx_core_matrix_status) numelyx_core_matrix_create_dense(
+        k, 1, singular, singular_values
+    );
+    if (status != NUMERUS_MATRIX_SUCCESS) {
+        numelyx_core_matrix_destroy(*u);
+        *u = NULL;
+        goto cleanup;
+    }
+
+    status = (numelyx_core_matrix_status) numelyx_core_matrix_create_dense(
+        k, columns, vt_data, vt
+    );
+    if (status != NUMERUS_MATRIX_SUCCESS) {
+        numelyx_core_matrix_destroy(*singular_values);
+        numelyx_core_matrix_destroy(*u);
+        *singular_values = NULL;
+        *u = NULL;
+    }
+
+cleanup:
+    if (vt_data != NULL) matrix_svd_free(vt_data);
+    if (u_data != NULL) matrix_svd_free(u_data);
+    if (singular != NULL) matrix_svd_free(singular);
+    if (a != NULL) matrix_svd_free(a);
+    return status;
+}
+
 numelyx_core_matrix_status numelyx_core_matrix_svd(
     const numelyx_core_matrix *matrix,
     numelyx_core_matrix **u,
@@ -382,6 +524,16 @@ numelyx_core_matrix_status numelyx_core_matrix_svd(
     rows = numelyx_core_matrix_rows(matrix);
     columns = numelyx_core_matrix_columns(matrix);
     k = rows < columns ? rows : columns;
+
+    if (rows <= (size_t) INT_MAX && columns <= (size_t) INT_MAX) {
+        status = matrix_svd_lapack(
+            matrix, rows, columns, u, singular_values, vt
+        );
+        if (status != NUMERUS_MATRIX_NO_CONVERGENCE) {
+            return status;
+        }
+        /* The existing one-sided Jacobi implementation remains the fallback. */
+    }
 
     if (rows < columns) {
         status = (numelyx_core_matrix_status) numelyx_core_matrix_create_transpose(

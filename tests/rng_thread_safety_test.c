@@ -1,6 +1,7 @@
 #include "../numelyx_core_rng.h"
 
 #include <assert.h>
+#include <stdbool.h>
 #include <math.h>
 #include <stdatomic.h>
 #include <stddef.h>

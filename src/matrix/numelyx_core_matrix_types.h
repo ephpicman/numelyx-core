@@ -140,7 +140,11 @@ typedef struct numelyx_core_matrix numelyx_core_matrix;
  * a Matrix status on failure; the status is propagated to the caller.
  * The callback must be deterministic and must not depend on mutable external
  * state. The context is borrowed, read-only, and must remain valid and
- * logically unchanged for the lifetime of the child Matrix.
+ * logically unchanged for the lifetime of the child Matrix. Because a Matrix
+ * may be read concurrently, callback implementations and their contexts must
+ * be safe for concurrent invocation. During cache computation, callbacks must
+ * not enter cache operations on another Matrix in a way that can invert lock
+ * acquisition order.
  */
 typedef numelyx_core_matrix_status (*numelyx_core_coordinate_transform_fn)(
     size_t row,

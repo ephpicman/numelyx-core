@@ -22,7 +22,41 @@ add_library(numelyx_core STATIC ${NUMELYX_CORE_SOURCES})
 add_library(Numelyx::Core ALIAS numelyx_core)
 
 find_package(Threads REQUIRED)
-target_link_libraries(numelyx_core PUBLIC Threads::Threads)
+find_package(BLAS REQUIRED)
+find_package(LAPACK REQUIRED)
+
+# Numerically dense kernels use the CBLAS interface. Keep the vendor ABI
+# behind CBLAS rather than calling compiler-specific Fortran symbols.
+find_path(NUMELYX_CBLAS_INCLUDE_DIR NAMES cblas.h)
+if(NOT NUMELYX_CBLAS_INCLUDE_DIR)
+    message(FATAL_ERROR "A CBLAS implementation (cblas.h) is required")
+endif()
+
+include(CheckCSourceCompiles)
+set(CMAKE_REQUIRED_INCLUDES "${NUMELYX_CBLAS_INCLUDE_DIR}")
+set(CMAKE_REQUIRED_LIBRARIES "${BLAS_LIBRARIES}")
+check_c_source_compiles("
+    #include <cblas.h>
+    int main(void) {
+        double a = 1.0, b = 1.0, c = 0.0;
+        cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans,
+                    1, 1, 1, 1.0, &a, 1, &b, 1, 0.0, &c, 1);
+        return c == 1.0 ? 0 : 1;
+    }
+" NUMELYX_CBLAS_LINKS)
+unset(CMAKE_REQUIRED_INCLUDES)
+unset(CMAKE_REQUIRED_LIBRARIES)
+if(NOT NUMELYX_CBLAS_LINKS)
+    message(FATAL_ERROR "The selected BLAS library must provide the CBLAS API")
+endif()
+
+target_include_directories(numelyx_core PRIVATE "${NUMELYX_CBLAS_INCLUDE_DIR}")
+target_compile_definitions(numelyx_core PRIVATE NUMELYX_HAVE_CBLAS=1)
+target_link_libraries(numelyx_core PUBLIC
+    Threads::Threads
+    ${BLAS_LIBRARIES}
+    ${LAPACK_LIBRARIES}
+)
 
 if(NUMELYX_ENABLE_TSAN)
     if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")

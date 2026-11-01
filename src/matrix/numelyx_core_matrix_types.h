@@ -143,8 +143,7 @@ typedef struct numelyx_core_matrix numelyx_core_matrix;
  * logically unchanged for the lifetime of the child Matrix. Because a Matrix
  * may be read concurrently, callback implementations and their contexts must
  * be safe for concurrent invocation. During cache computation, callbacks must
- * not enter cache operations on another Matrix in a way that can invert lock
- * acquisition order.
+ * not reenter cache-producing APIs on any Matrix while the callback is running.
  */
 typedef numelyx_core_matrix_status (*numelyx_core_coordinate_transform_fn)(
     size_t row,

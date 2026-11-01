@@ -11,7 +11,10 @@
 #include "numelyx_core_size.h"
 
 #include <math.h>
+#include <limits.h>
 #include <stdlib.h>
+
+#include <cblas.h>
 
 # define numelyx_core_multiply_alloc(size) malloc(size)
 # define numelyx_core_multiply_free(ptr) free(ptr)
@@ -429,6 +432,106 @@ int numelyx_core_matrix_multiply(
         );
         if (status != NUMERUS_MATRIX_SUCCESS) return status;
         if (used) return NUMERUS_MATRIX_SUCCESS;
+    }
+
+    /*
+     * Dense finite products are dispatched to CBLAS. Values are gathered
+     * through the Matrix accessor so row-major views and transformed dense
+     * roots are handled without exposing Storage internals. Non-finite inputs
+     * retain the scalar kernel's established IEEE-754 evaluation path.
+     * Dimensions outside the CBLAS integer ABI also use the scalar kernel.
+     */
+    if (numelyx_core_matrix_storage_kind(left) == NUMERUS_STORAGE_DENSE &&
+        numelyx_core_matrix_storage_kind(right) == NUMERUS_STORAGE_DENSE &&
+        rows <= (size_t) INT_MAX &&
+        inner_dimension <= (size_t) INT_MAX &&
+        columns <= (size_t) INT_MAX) {
+        size_t left_count;
+        size_t right_count;
+        size_t left_bytes;
+        size_t right_bytes;
+        double *left_values = NULL;
+        double *right_values = NULL;
+        bool finite_inputs = true;
+
+        if (numelyx_core_size_multiply(rows, inner_dimension, &left_count) &&
+            numelyx_core_size_multiply(inner_dimension, columns, &right_count) &&
+            numelyx_core_size_multiply(left_count, sizeof(double), &left_bytes) &&
+            numelyx_core_size_multiply(right_count, sizeof(double), &right_bytes)) {
+            left_values = numelyx_core_multiply_alloc(left_bytes);
+            right_values = numelyx_core_multiply_alloc(right_bytes);
+        }
+
+        if (left_values != NULL && right_values != NULL) {
+            for (row = 0; row < rows && finite_inputs; row++) {
+                for (column = 0; column < inner_dimension; column++) {
+                    double value;
+                    status = numelyx_core_matrix_get(left, row, column, &value);
+                    if (status != NUMERUS_MATRIX_SUCCESS) {
+                        numelyx_core_multiply_free(right_values);
+                        numelyx_core_multiply_free(left_values);
+                        return status;
+                    }
+                    if (!isfinite(value)) {
+                        finite_inputs = false;
+                        break;
+                    }
+                    left_values[row * inner_dimension + column] = value;
+                }
+            }
+
+            for (row = 0; row < inner_dimension && finite_inputs; row++) {
+                for (column = 0; column < columns; column++) {
+                    double value;
+                    status = numelyx_core_matrix_get(right, row, column, &value);
+                    if (status != NUMERUS_MATRIX_SUCCESS) {
+                        numelyx_core_multiply_free(right_values);
+                        numelyx_core_multiply_free(left_values);
+                        return status;
+                    }
+                    if (!isfinite(value)) {
+                        finite_inputs = false;
+                        break;
+                    }
+                    right_values[row * columns + column] = value;
+                }
+            }
+
+            if (finite_inputs) {
+                values = numelyx_core_multiply_alloc(allocation_size);
+                if (values == NULL) {
+                    numelyx_core_multiply_free(right_values);
+                    numelyx_core_multiply_free(left_values);
+                    return NUMERUS_MATRIX_OUT_OF_MEMORY;
+                }
+
+                cblas_dgemm(
+                    CblasRowMajor,
+                    CblasNoTrans,
+                    CblasNoTrans,
+                    (int) rows,
+                    (int) columns,
+                    (int) inner_dimension,
+                    1.0,
+                    left_values,
+                    (int) inner_dimension,
+                    right_values,
+                    (int) columns,
+                    0.0,
+                    values,
+                    (int) columns
+                );
+
+                numelyx_core_multiply_free(right_values);
+                numelyx_core_multiply_free(left_values);
+                status = numelyx_core_matrix_create_dense(rows, columns, values, matrix);
+                numelyx_core_multiply_free(values);
+                return status;
+            }
+        }
+
+        numelyx_core_multiply_free(right_values);
+        numelyx_core_multiply_free(left_values);
     }
 
     values = numelyx_core_multiply_alloc(allocation_size);

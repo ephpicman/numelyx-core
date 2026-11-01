@@ -22,6 +22,10 @@ add_library(Numelyx::Core ALIAS numelyx_core)
 find_package(Threads REQUIRED)
 target_link_libraries(numelyx_core PUBLIC Threads::Threads)
 
+if(MSVC)
+    target_compile_options(numelyx_core PUBLIC /experimental:c11atomics)
+endif()
+
 target_include_directories(numelyx_core
     PUBLIC
         "${CMAKE_CURRENT_SOURCE_DIR}"

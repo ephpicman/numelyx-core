@@ -1233,7 +1233,7 @@ numelyx_core_storage_kind numelyx_core_matrix_storage_kind(
 }
 
 /**
- * Release a Matrix. Parent relationships are non-owning.
+ * Release one Matrix reference. Final reclamation releases retained dependencies.
  */
 
 /*

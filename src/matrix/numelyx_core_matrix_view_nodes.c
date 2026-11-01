@@ -354,8 +354,8 @@ static numelyx_core_matrix_status rotate_90_counterclockwise_coordinate_transfor
 /*
  * Shared constructor for row/column selection views. It validates indices,
  * copies them into view-owned memory (so the caller's array may be released),
- * and stores the parent as a borrowed pointer. Destruction frees the copied
- * indices but never destroys the parent.
+ * and stores a retained parent reference. Destruction frees the copied
+ * indices and releases the retained parent reference.
  */
 int numelyx_core_matrix_create_selection_view(
     numelyx_core_matrix *parent,

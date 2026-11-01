@@ -31,8 +31,8 @@ int numelyx_core_matrix_create(
  * @brief Create a Matrix whose values are provided by an existing parent.
  *
  * A child may have different logical dimensions from its parent. This is
- * required for derived views such as a transpose. The parent reference is
- * non-owning; the eventual object layer is responsible for keeping it alive.
+ * required for derived views such as a transpose. The child retains the
+ * parent automatically and releases that dependency when the child is reclaimed.
  *
  * @param parent Existing parent Matrix.
  * @param rows Number of rows exposed by the child.

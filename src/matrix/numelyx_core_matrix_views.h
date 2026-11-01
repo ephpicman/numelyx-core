@@ -11,8 +11,8 @@
  * @brief Create a lazy transpose view of an existing Matrix.
  *
  * The returned child exposes parent columns as rows and parent rows as
- * columns. No element data is copied. The parent is non-owning and must
- * remain alive for the lifetime of the transpose view.
+ * columns. No element data is copied. The transpose retains the parent until
+ * the view is reclaimed.
  */
 int numelyx_core_matrix_create_transpose(
     numelyx_core_matrix *parent,
@@ -108,8 +108,7 @@ int numelyx_core_matrix_create_join_vertical(
  *
  * The slice contains row_count × column_count values starting at the specified
  * zero-based parent coordinates. Counts must be positive and the complete
- * range must fit inside the parent. The parent is borrowed and must outlive
- * the result.
+ * range must fit inside the parent. The result retains the parent.
  */
 int numelyx_core_matrix_create_slice(
     numelyx_core_matrix *parent,
@@ -124,7 +123,7 @@ int numelyx_core_matrix_create_slice(
  * Select rows by a copied array of zero-based indices.
  *
  * Index order is preserved and repeated indices are allowed. The result is a
- * lazy view; the index array is copied, while the parent remains borrowed.
+ * lazy view; the index array is copied, while the parent is retained.
  */
 int numelyx_core_matrix_create_select_rows(
     numelyx_core_matrix *parent,
@@ -137,7 +136,7 @@ int numelyx_core_matrix_create_select_rows(
  * Select columns by a copied array of zero-based indices.
  *
  * Index order is preserved and repeated indices are allowed. The result is a
- * lazy view; the index array is copied, while the parent remains borrowed.
+ * lazy view; the index array is copied, while the parent is retained.
  */
 int numelyx_core_matrix_create_select_columns(
     numelyx_core_matrix *parent,
@@ -150,8 +149,7 @@ int numelyx_core_matrix_create_select_columns(
  * Create a lazy row-major reshape view.
  *
  * The requested shape must contain exactly the same number of elements as
- * the parent. Logical traversal order is row-major. The parent is borrowed
- * and must outlive the view.
+ * the parent. Logical traversal order is row-major. The parent is retained.
  */
 int numelyx_core_matrix_create_reshape(
     numelyx_core_matrix *parent,
@@ -176,7 +174,7 @@ int numelyx_core_matrix_create_flatten(
  *
  * top/bottom/left/right specify the number of rows or columns added on each
  * side. Existing values retain their positions; all padding cells use value.
- * The parent is borrowed and must outlive the view. Dimension overflow is
+ * The parent is retained. Dimension overflow is
  * reported as NUMERUS_MATRIX_OVERFLOW.
  */
 int numelyx_core_matrix_create_pad(
@@ -202,8 +200,7 @@ int numelyx_core_matrix_create_zero_extend(
 /**
  * Tile a Matrix lazily row_repetitions × column_repetitions times.
  *
- * Repetition counts must be positive. The parent is borrowed and must outlive
- * the view; output dimensions are checked for overflow.
+ * Repetition counts must be positive. The view retains its parent; output dimensions are checked for overflow.
  */
 int numelyx_core_matrix_create_repeat(
     numelyx_core_matrix *parent,
@@ -218,7 +215,7 @@ int numelyx_core_matrix_create_repeat(
  * Off-diagonal blocks are zero. The parent may be rectangular; result
  * dimensions are (parent.rows * repetitions) ×
  * (parent.columns * repetitions). Repetitions must be positive, and the
- * borrowed parent must outlive the view.
+ * retained parent remains alive until the view is reclaimed.
  */
 int numelyx_core_matrix_create_block_diagonal(
     numelyx_core_matrix *parent,
@@ -232,8 +229,7 @@ int numelyx_core_matrix_create_block_diagonal(
  * Every block must be non-NULL. Blocks in each block row must have equal row
  * counts, and blocks in each block column must have equal column counts.
  * Missing/NULL blocks are rejected rather than implicitly treated as zeros.
- * The pointer array is copied; all block Matrices are borrowed and must
- * outlive the resulting view. Grid dimensions and cumulative output sizes are
+ * The pointer array is copied; each block Matrix is retained by the grid. Grid dimensions and cumulative output sizes are
  * checked for overflow.
  */
 int numelyx_core_matrix_create_block_grid(
@@ -248,8 +244,7 @@ int numelyx_core_matrix_create_block_grid(
  *
  * Offset zero selects the main diagonal; positive offsets select diagonals
  * above it, and negative offsets select diagonals below it. An offset with no
- * elements in the Matrix returns NUMERUS_MATRIX_OUT_OF_BOUNDS. The parent is
- * borrowed and must outlive the result.
+ * elements in the Matrix returns NUMERUS_MATRIX_OUT_OF_BOUNDS. The parent is retained until the result is reclaimed.
  */
 int numelyx_core_matrix_create_diagonal_extract(
     numelyx_core_matrix *parent,
@@ -263,7 +258,7 @@ int numelyx_core_matrix_create_diagonal_extract(
  * The main diagonal is selected by offset zero; positive offsets place values
  * above it and negative offsets below it. The output side length is the vector
  * length plus the absolute offset, checked for overflow. Off-diagonal elements
- * are zero. The vector is borrowed and must outlive the result.
+ * are zero. The vector is retained until the result is reclaimed.
  */
 int numelyx_core_matrix_create_diagonal_from_vector(
     numelyx_core_matrix *vector,
@@ -275,8 +270,7 @@ int numelyx_core_matrix_create_diagonal_from_vector(
  * Permute all rows using a full zero-based permutation.
  *
  * The index count must equal the parent row count; every index must be in
- * range and appear exactly once. The index list is copied and the parent is
- * borrowed.
+ * range and appear exactly once. The index list is copied and the parent is retained.
  */
 int numelyx_core_matrix_create_permute_rows(
     numelyx_core_matrix *parent,
@@ -289,8 +283,7 @@ int numelyx_core_matrix_create_permute_rows(
  * Permute all columns using a full zero-based permutation.
  *
  * The index count must equal the parent column count; every index must be in
- * range and appear exactly once. The index list is copied and the parent is
- * borrowed.
+ * range and appear exactly once. The index list is copied and the parent is retained.
  */
 int numelyx_core_matrix_create_permute_columns(
     numelyx_core_matrix *parent,

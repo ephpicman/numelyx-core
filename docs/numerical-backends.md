@@ -25,7 +25,7 @@ vendor-specific routines are confined to the internal numerical layer.
 | Symmetric eigen decomposition | LAPACKE `LAPACKE_dsyevd` (row-major); cyclic Jacobi remains the non-convergence fallback |
 | Triangular solve | LAPACKE `LAPACKE_dtrtrs` (row-major), after exact structural validation |
 | Identity, zero, and sparse multiplication shortcuts | Existing Numelyx Core fast paths |
-| Non-finite LU inputs or dimensions beyond the conservative 32-bit LAPACK boundary | Existing native LU path |
+| Singular LU inputs, non-finite data, or dimensions beyond the conservative 32-bit LAPACK boundary | Existing native LU path (preserves exact-pivot rank semantics) |
 | Pivoted QR (rank-revealing) | Existing native implementation; its permutation/rank contract remains separate |
 | Non-finite dense multiplication and non-dense multiplication | Existing native multiplication path |
 

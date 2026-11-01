@@ -91,7 +91,12 @@ numelyx_core_optimizer_status numelyx_core_optimizer_minimize(
     numelyx_core_optimizer_result **result
 );
 
-/** Release a result; accepts NULL. */
+/** Retain a result for shared read-only use; caller must already hold a valid reference. */
+numelyx_core_optimizer_status numelyx_core_optimizer_result_retain(
+    numelyx_core_optimizer_result *result
+);
+
+/** Release a result reference; accepts NULL. */
 void numelyx_core_optimizer_result_destroy(numelyx_core_optimizer_result *result);
 
 /** Return the number of parameters owned by the result, or zero for NULL. */

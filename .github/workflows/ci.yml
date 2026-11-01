@@ -39,3 +39,18 @@ jobs:
         run: cmake --build build-tsan --config Debug --parallel 2
       - name: Run instrumented tests
         run: ctest --test-dir build-tsan -C Debug --output-on-failure
+
+  address-undefined-sanitizers:
+    name: AddressSanitizer + UBSan (Ubuntu / GCC)
+    runs-on: ubuntu-latest
+    env:
+      ASAN_OPTIONS: detect_leaks=1:strict_string_checks=1
+      UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure with AddressSanitizer and UBSan
+        run: cmake -S . -B build-asan-ubsan -DNUMELYX_BUILD_TESTS=ON -DNUMELYX_ENABLE_ASAN_UBSAN=ON
+      - name: Build instrumented tests
+        run: cmake --build build-asan-ubsan --config Debug --parallel 2
+      - name: Run instrumented tests
+        run: ctest --test-dir build-asan-ubsan -C Debug --output-on-failure

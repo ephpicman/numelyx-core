@@ -189,7 +189,11 @@ numelyx_core_matrix_status numelyx_core_matrix_inverse(
     numelyx_core_matrix *mutable_matrix =
         (numelyx_core_matrix *) matrix;
 
-    if (matrix == NULL || inverse == NULL) {
+    if (inverse == NULL) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    *inverse = NULL;
+    if (matrix == NULL) {
         return NUMERUS_MATRIX_INVALID_ARGUMENT;
     }
     if (!numelyx_core_mutex_lock(&mutable_matrix->cache_mutex)) {

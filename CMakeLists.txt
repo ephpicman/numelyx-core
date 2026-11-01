@@ -90,6 +90,7 @@ if(NUMELYX_BUILD_TESTS)
 
     set(NUMELYX_ALLOC_WRAP_TESTS
         matrix_allocation_failure_test
+        matrix_concurrent_allocation_failure_test
         storage_allocation_failure_test
     )
 

@@ -26,7 +26,12 @@ typedef enum {
     NUMERUS_RNG_SIZE_OVERFLOW
 } numelyx_core_rng_status;
 
-/** Opaque mutable PCG-XSH-RR 64/32 state. */
+/**
+ * Opaque mutable PCG-XSH-RR 64/32 state.
+ * Public state operations are serialized per RNG. Concurrent users must each
+ * retain a reference before use and release it with numelyx_core_rng_destroy().
+ * Inter-thread execution order is scheduler-dependent.
+ */
 typedef struct numelyx_core_rng numelyx_core_rng;
 
 /**

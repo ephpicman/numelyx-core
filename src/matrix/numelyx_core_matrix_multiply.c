@@ -14,7 +14,11 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include <cblas.h>
+#ifdef _WIN32
+# include <mkl.h>
+#else
+# include <cblas.h>
+#endif
 
 # define numelyx_core_multiply_alloc(size) malloc(size)
 # define numelyx_core_multiply_free(ptr) free(ptr)

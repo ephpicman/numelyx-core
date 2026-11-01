@@ -13,10 +13,141 @@
 #include "numelyx_core_size.h"
 
 #include <math.h>
+#include <limits.h>
 #include <stdlib.h>
+
+#include <lapacke.h>
 
 # define matrix_eigen_alloc(size) malloc(size)
 # define matrix_eigen_free(pointer) free(pointer)
+
+static numelyx_core_matrix_status matrix_symmetric_eigen_lapack(
+    const numelyx_core_matrix *matrix,
+    size_t size,
+    numelyx_core_matrix **eigenvalues,
+    numelyx_core_matrix **eigenvectors
+)
+{
+    size_t element_count;
+    size_t matrix_bytes;
+    size_t vector_bytes;
+    size_t row;
+    size_t column;
+    double scale = 0.0;
+    double relative_threshold = NUMERUS_EPSILON * (double) size;
+    double *work = NULL;
+    double *values = NULL;
+    lapack_int info;
+    numelyx_core_matrix_status status = NUMERUS_MATRIX_SUCCESS;
+
+    if (size > (size_t) INT_MAX) return NUMERUS_MATRIX_NO_CONVERGENCE;
+    if (!numelyx_core_size_multiply(size, size, &element_count) ||
+        !numelyx_core_size_multiply(element_count, sizeof(*work), &matrix_bytes) ||
+        !numelyx_core_size_multiply(size, sizeof(*values), &vector_bytes)) {
+        return NUMERUS_MATRIX_OVERFLOW;
+    }
+
+    work = matrix_eigen_alloc(matrix_bytes);
+    values = matrix_eigen_alloc(vector_bytes);
+    if (work == NULL || values == NULL) {
+        status = NUMERUS_MATRIX_OUT_OF_MEMORY;
+        goto cleanup;
+    }
+
+    for (row = 0; row < size; row++) {
+        for (column = 0; column < size; column++) {
+            double value;
+            status = numelyx_core_matrix_get(matrix, row, column, &value);
+            if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+            if (!isfinite(value)) {
+                status = NUMERUS_MATRIX_NON_FINITE;
+                goto cleanup;
+            }
+            work[row * size + column] = value;
+            if (fabs(value) > scale) scale = fabs(value);
+        }
+    }
+
+    if (scale > 0.0) {
+        for (row = 0; row < size; row++) {
+            for (column = row + 1; column < size; column++) {
+                double upper = work[row * size + column] / scale;
+                double lower = work[column * size + row] / scale;
+                if (fabs(upper - lower) > relative_threshold) {
+                    status = NUMERUS_MATRIX_NOT_SYMMETRIC;
+                    goto cleanup;
+                }
+                work[row * size + column] =
+                    0.5 * work[row * size + column] +
+                    0.5 * work[column * size + row];
+                work[column * size + row] = work[row * size + column];
+            }
+        }
+    }
+
+    info = LAPACKE_dsyevd(
+        LAPACK_ROW_MAJOR, 'V', 'L',
+        (lapack_int) size, work, (lapack_int) size, values
+    );
+    if (info == LAPACK_WORK_MEMORY_ERROR ||
+        info == LAPACK_TRANSPOSE_MEMORY_ERROR) {
+        status = NUMERUS_MATRIX_OUT_OF_MEMORY;
+        goto cleanup;
+    }
+    if (info > 0) {
+        status = NUMERUS_MATRIX_NO_CONVERGENCE;
+        goto cleanup;
+    }
+    if (info < 0) {
+        status = NUMERUS_MATRIX_INVALID_ARGUMENT;
+        goto cleanup;
+    }
+
+    for (row = 0; row < size; row++) {
+        if (!isfinite(values[row])) {
+            status = NUMERUS_MATRIX_NON_FINITE;
+            goto cleanup;
+        }
+    }
+    for (row = 0; row < element_count; row++) {
+        if (!isfinite(work[row])) {
+            status = NUMERUS_MATRIX_NON_FINITE;
+            goto cleanup;
+        }
+    }
+
+    /* LAPACK returns ascending eigenvalues; the Matrix API specifies descending. */
+    for (column = 0; column < size / 2; column++) {
+        size_t opposite = size - 1 - column;
+        double temporary = values[column];
+        values[column] = values[opposite];
+        values[opposite] = temporary;
+
+        for (row = 0; row < size; row++) {
+            temporary = work[row * size + column];
+            work[row * size + column] = work[row * size + opposite];
+            work[row * size + opposite] = temporary;
+        }
+    }
+
+    status = (numelyx_core_matrix_status) numelyx_core_matrix_create_dense(
+        size, 1, values, eigenvalues
+    );
+    if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+
+    status = (numelyx_core_matrix_status) numelyx_core_matrix_create_dense(
+        size, size, work, eigenvectors
+    );
+    if (status != NUMERUS_MATRIX_SUCCESS) {
+        numelyx_core_matrix_destroy(*eigenvalues);
+        *eigenvalues = NULL;
+    }
+
+cleanup:
+    if (values != NULL) matrix_eigen_free(values);
+    if (work != NULL) matrix_eigen_free(work);
+    return status;
+}
 
 numelyx_core_matrix_status numelyx_core_matrix_symmetric_eigen(
     const numelyx_core_matrix *matrix,
@@ -53,6 +184,15 @@ numelyx_core_matrix_status numelyx_core_matrix_symmetric_eigen(
     }
 
     size = numelyx_core_matrix_rows(matrix);
+    if (size <= (size_t) INT_MAX) {
+        status = matrix_symmetric_eigen_lapack(
+            matrix, size, eigenvalues, eigenvectors
+        );
+        if (status != NUMERUS_MATRIX_NO_CONVERGENCE) {
+            return status;
+        }
+        /* Retain the cyclic Jacobi implementation as a non-convergence fallback. */
+    }
     if (!numelyx_core_size_multiply(size, size, &element_count) ||
         !numelyx_core_size_multiply(element_count, sizeof(*work), &matrix_bytes) ||
         !numelyx_core_size_multiply(size, sizeof(*values), &vector_bytes) ||

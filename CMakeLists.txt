@@ -5,6 +5,7 @@ project(NumelyxCore VERSION 0.1.0 LANGUAGES C)
 option(NUMELYX_BUILD_TESTS "Build native C tests" ON)
 option(NUMELYX_BUILD_BENCHMARKS "Build diagnostic benchmarks" OFF)
 option(NUMELYX_ENABLE_TSAN "Enable ThreadSanitizer (Linux, GCC/Clang)" OFF)
+option(NUMELYX_ENABLE_ASAN_UBSAN "Enable AddressSanitizer and UndefinedBehaviorSanitizer (Linux, GCC/Clang)" OFF)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
@@ -37,6 +38,30 @@ if(NUMELYX_ENABLE_TSAN)
         -g
     )
     target_link_options(numelyx_core PUBLIC -fsanitize=thread)
+endif()
+
+if(NUMELYX_ENABLE_TSAN AND NUMELYX_ENABLE_ASAN_UBSAN)
+    message(FATAL_ERROR "ThreadSanitizer cannot be combined with Address/UndefinedBehaviorSanitizer")
+endif()
+
+if(NUMELYX_ENABLE_ASAN_UBSAN)
+    if(NOT CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        message(FATAL_ERROR "NUMELYX_ENABLE_ASAN_UBSAN is supported only on Linux")
+    endif()
+    if(NOT CMAKE_C_COMPILER_ID MATCHES "^(GNU|Clang)$")
+        message(FATAL_ERROR "NUMELYX_ENABLE_ASAN_UBSAN requires GCC or Clang")
+    endif()
+
+    target_compile_options(numelyx_core PUBLIC
+        -fsanitize=address,undefined
+        -fno-omit-frame-pointer
+        -fno-sanitize-recover=all
+        -g
+    )
+    target_link_options(numelyx_core PUBLIC
+        -fsanitize=address,undefined
+        -fno-sanitize-recover=all
+    )
 endif()
 
 if(MSVC)

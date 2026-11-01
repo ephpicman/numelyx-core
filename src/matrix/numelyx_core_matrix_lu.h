@@ -10,15 +10,17 @@
 typedef struct numelyx_core_matrix_lu_factorization numelyx_core_matrix_lu_factorization;
 
 /**
- * Factor a square Matrix using LAPACK's partial-pivoted LU routine for finite inputs.
+ * Factor a square Matrix using LAPACK's partial-pivoted LU routine for
+ * nonsingular finite inputs.
  *
  * The factorization owns a packed LU buffer and a row permutation and is
  * reference-counted with atomic lifetime management. Concurrent retain/release
  * is supported when each caller already owns a valid reference. It does not
- * retain the source Matrix. A zero pivot is
- * skipped rather than treated as an API failure; rank counts non-zero diagonal pivots under the exact-zero policy. Singular matrices, non-finite inputs, and
+ * retain the source Matrix. Singular matrices, non-finite inputs, and
  * dimensions outside the supported LAPACK integer range use the native
- * implementation to preserve the established rank and pivot semantics. On failure, *factorization remains NULL.
+ * implementation. A zero pivot is skipped rather than treated as an API
+ * failure; rank counts non-zero diagonal pivots under the exact-zero policy.
+ * On failure, *factorization remains NULL.
  */
 numelyx_core_matrix_status numelyx_core_matrix_lu_factorize(
     const numelyx_core_matrix *matrix,

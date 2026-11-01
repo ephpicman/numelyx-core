@@ -8,13 +8,13 @@
  * documentation. This file is test support, not runtime code.
  */
 
-#include "../numerus_matrix.h"
+#include "../numelyx_core_matrix.h"
 
 #include <assert.h>
 #include <math.h>
 #include <stdio.h>
 
-static numerus_matrix_status fail_on_row_one(
+static numelyx_core_matrix_status fail_on_row_one(
     size_t row,
     size_t column,
     size_t *parent_row,
@@ -33,17 +33,17 @@ static numerus_matrix_status fail_on_row_one(
 }
 
 static void assert_cholesky_reconstructs(
-    const numerus_matrix *matrix,
-    const numerus_matrix *lower,
+    const numelyx_core_matrix *matrix,
+    const numelyx_core_matrix *lower,
     double tolerance
 )
 {
-    size_t size = numerus_matrix_rows(matrix);
+    size_t size = numelyx_core_matrix_rows(matrix);
     size_t row;
     size_t column;
 
-    assert(numerus_matrix_rows(lower) == size);
-    assert(numerus_matrix_columns(lower) == size);
+    assert(numelyx_core_matrix_rows(lower) == size);
+    assert(numelyx_core_matrix_columns(lower) == size);
 
     for (row = 0; row < size; row++) {
         for (column = 0; column < size; column++) {
@@ -54,14 +54,14 @@ static void assert_cholesky_reconstructs(
             for (k = 0; k < size; k++) {
                 double left;
                 double right;
-                assert(numerus_matrix_get(lower, row, k, &left) ==
+                assert(numelyx_core_matrix_get(lower, row, k, &left) ==
                     NUMERUS_MATRIX_SUCCESS);
-                assert(numerus_matrix_get(lower, column, k, &right) ==
+                assert(numelyx_core_matrix_get(lower, column, k, &right) ==
                     NUMERUS_MATRIX_SUCCESS);
                 product += left * right;
             }
 
-            assert(numerus_matrix_get(
+            assert(numelyx_core_matrix_get(
                 matrix, row, column, &expected
             ) == NUMERUS_MATRIX_SUCCESS);
             assert(fabs(product - expected) <=
@@ -72,7 +72,7 @@ static void assert_cholesky_reconstructs(
     for (row = 0; row < size; row++) {
         for (column = row + 1; column < size; column++) {
             double value;
-            assert(numerus_matrix_get(lower, row, column, &value) ==
+            assert(numelyx_core_matrix_get(lower, row, column, &value) ==
                 NUMERUS_MATRIX_SUCCESS);
             assert(value == 0.0);
         }
@@ -86,33 +86,33 @@ static void test_known_positive_definite_matrix(void)
         12, 37, -43,
         -16, -43, 98
     };
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *lower = NULL;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *lower = NULL;
     double value;
 
-    assert(numerus_matrix_create_dense(3, 3, values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(3, 3, values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_cholesky(matrix, &lower) ==
+    assert(numelyx_core_matrix_cholesky(matrix, &lower) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_get(lower, 0, 0, &value) ==
+    assert(numelyx_core_matrix_get(lower, 0, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 2.0) < 1e-12);
-    assert(numerus_matrix_get(lower, 1, 0, &value) ==
+    assert(numelyx_core_matrix_get(lower, 1, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 6.0) < 1e-12);
-    assert(numerus_matrix_get(lower, 2, 0, &value) ==
+    assert(numelyx_core_matrix_get(lower, 2, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value + 8.0) < 1e-12);
-    assert(numerus_matrix_get(lower, 2, 1, &value) ==
+    assert(numelyx_core_matrix_get(lower, 2, 1, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 5.0) < 1e-12);
-    assert(numerus_matrix_get(lower, 2, 2, &value) ==
+    assert(numelyx_core_matrix_get(lower, 2, 2, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(fabs(value - 3.0) < 1e-12);
     assert_cholesky_reconstructs(matrix, lower, 1e-10);
 
-    numerus_matrix_destroy(lower);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(lower);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_scale_and_definiteness(void)
@@ -121,40 +121,40 @@ static void test_scale_and_definiteness(void)
     const double semidefinite_values[] = {1, 1, 1, 1};
     const double indefinite_values[] = {1, 2, 2, 1};
     const double near_singular_values[] = {1, 0, 0, 1e-12};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *lower = (void *) 1;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *lower = (void *) 1;
 
-    assert(numerus_matrix_create_dense(2, 2, small_values, &matrix) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, small_values, &matrix) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_cholesky(matrix, &lower) ==
+    assert(numelyx_core_matrix_cholesky(matrix, &lower) ==
         NUMERUS_MATRIX_SUCCESS);
     assert_cholesky_reconstructs(matrix, lower, 1e-9);
-    numerus_matrix_destroy(lower);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(lower);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         2, 2, semidefinite_values, &matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_cholesky(matrix, &lower) ==
+    assert(numelyx_core_matrix_cholesky(matrix, &lower) ==
         NUMERUS_MATRIX_NOT_POSITIVE_DEFINITE);
     assert(lower == NULL);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         2, 2, indefinite_values, &matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_cholesky(matrix, &lower) ==
+    assert(numelyx_core_matrix_cholesky(matrix, &lower) ==
         NUMERUS_MATRIX_NOT_POSITIVE_DEFINITE);
     assert(lower == NULL);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         2, 2, near_singular_values, &matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_cholesky(matrix, &lower) ==
+    assert(numelyx_core_matrix_cholesky(matrix, &lower) ==
         NUMERUS_MATRIX_NOT_POSITIVE_DEFINITE);
     assert(lower == NULL);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_validation_and_read_failures(void)
@@ -162,51 +162,51 @@ static void test_validation_and_read_failures(void)
     const double nonsymmetric_values[] = {1, 0, 1, 1};
     const double nonfinite_values[] = {1, NAN, NAN, 1};
     const double rectangular_values[] = {1, 2, 3, 4, 5, 6};
-    numerus_matrix *matrix = NULL;
-    numerus_matrix *failing = NULL;
-    numerus_matrix *lower = (void *) 1;
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *failing = NULL;
+    numelyx_core_matrix *lower = (void *) 1;
 
-    assert(numerus_matrix_cholesky(NULL, &lower) ==
+    assert(numelyx_core_matrix_cholesky(NULL, &lower) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(lower == NULL);
-    assert(numerus_matrix_cholesky(NULL, NULL) ==
+    assert(numelyx_core_matrix_cholesky(NULL, NULL) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         2, 3, rectangular_values, &matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_cholesky(matrix, &lower) ==
+    assert(numelyx_core_matrix_cholesky(matrix, &lower) ==
         NUMERUS_MATRIX_NOT_SQUARE);
     assert(lower == NULL);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         2, 2, nonsymmetric_values, &matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_cholesky(matrix, &lower) ==
+    assert(numelyx_core_matrix_cholesky(matrix, &lower) ==
         NUMERUS_MATRIX_NOT_SYMMETRIC);
     assert(lower == NULL);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         2, 2, nonfinite_values, &matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_cholesky(matrix, &lower) ==
+    assert(numelyx_core_matrix_cholesky(matrix, &lower) ==
         NUMERUS_MATRIX_NON_FINITE);
     assert(lower == NULL);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(matrix);
 
-    assert(numerus_matrix_create_dense(
+    assert(numelyx_core_matrix_create_dense(
         2, 2, rectangular_values, &matrix
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_from_parent_with_transforms(
+    assert(numelyx_core_matrix_create_from_parent_with_transforms(
         matrix, 2, 2, fail_on_row_one, NULL, NULL, &failing
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_cholesky(failing, &lower) ==
+    assert(numelyx_core_matrix_cholesky(failing, &lower) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(lower == NULL);
-    numerus_matrix_destroy(failing);
-    numerus_matrix_destroy(matrix);
+    numelyx_core_matrix_destroy(failing);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 int main(void)

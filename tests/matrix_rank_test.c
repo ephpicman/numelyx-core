@@ -97,6 +97,36 @@ static void test_scale_aware_threshold(void)
     numelyx_core_matrix_destroy(matrix);
 }
 
+static void test_diagonal_rank_fast_path_contract(void)
+{
+    const double full_values[] = {1e100, 0.0, 0.0, 2e100};
+    const double deficient_values[] = {1.0, 0.0, 0.0, 1e-12};
+    const double rectangular_values[] = {0.0, 0.0, 0.0, 3.0, 0.0, 0.0};
+    numelyx_core_matrix *matrix = NULL;
+    size_t rank = 99;
+
+    assert(numelyx_core_matrix_create_diagonal(
+        2, full_values, &matrix
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 2);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_diagonal(
+        2, deficient_values, &matrix
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 1);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_dense(
+        2, 3, rectangular_values, &matrix
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 1);
+    numelyx_core_matrix_destroy(matrix);
+}
+
 static void test_nonfinite_and_failure_paths(void)
 {
     const double nan_values[] = {1, NAN, 3, 4};
@@ -152,6 +182,7 @@ int main(void)
 {
     test_full_and_deficient_rank();
     test_scale_aware_threshold();
+    test_diagonal_rank_fast_path_contract();
     test_nonfinite_and_failure_paths();
     puts("Matrix numerical rank tests passed.");
     return 0;

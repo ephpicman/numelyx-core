@@ -607,6 +607,7 @@ numelyx_core_matrix_status numelyx_core_matrix_rank(
     size_t pivot_index = 0;
     size_t pivot_limit;
     size_t rank_result = 0;
+    bool is_diagonal = true;
     double scale = 0.0;
     double relative_threshold;
     double *values;
@@ -644,6 +645,9 @@ numelyx_core_matrix_status numelyx_core_matrix_rank(
             }
 
             values[row * columns + column] = value;
+            if (row != column && value != 0.0) {
+                is_diagonal = false;
+            }
             if (fabs(value) > scale) {
                 scale = fabs(value);
             }
@@ -659,6 +663,23 @@ numelyx_core_matrix_status numelyx_core_matrix_rank(
     relative_threshold = NUMERUS_EPSILON *
         (double) (rows > columns ? rows : columns);
     pivot_limit = rows < columns ? rows : columns;
+
+    /*
+     * Complete pivoting on an exactly diagonal matrix only counts diagonal
+     * entries above the same global, scale-relative threshold. Avoid the
+     * cubic elimination pass for this common structured case.
+     */
+    if (is_diagonal) {
+        for (row = 0; row < pivot_limit; row++) {
+            if (fabs(values[row * columns + row]) / scale >
+                relative_threshold) {
+                rank_result++;
+            }
+        }
+        free(values);
+        *rank = rank_result;
+        return NUMERUS_MATRIX_SUCCESS;
+    }
 
     while (pivot_index < pivot_limit) {
         size_t pivot_row = pivot_index;

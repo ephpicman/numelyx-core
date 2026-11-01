@@ -68,6 +68,8 @@ CBLAS/LAPACKE integer dimensions are range-checked before conversion.
   combining Numelyx-level parallelism with multithreaded BLAS should configure
   vendor thread counts to avoid oversubscription.
 
+Numerical rank estimation now detects exact diagonal logical matrices during its existing finite-value scan and counts diagonal pivots using the unchanged global scale-relative threshold. This avoids allocating/eliminating a second cubic work phase for diagonal inputs; the detection scan remains O(m*n), and transformed views are evaluated through logical Matrix accessors rather than trusting their parent Storage tag.
+
 ## Remaining optimization work
 
 The structure-aware solve dispatcher currently covers exact triangular

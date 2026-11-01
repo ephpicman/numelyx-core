@@ -35,6 +35,7 @@ endif()
 
 if(NUMELYX_BUILD_TESTS)
     enable_testing()
+    find_package(Threads REQUIRED)
     file(GLOB NUMELYX_TEST_SOURCES CONFIGURE_DEPENDS
         "${CMAKE_CURRENT_SOURCE_DIR}/tests/*_test.c"
     )
@@ -75,6 +76,10 @@ if(NUMELYX_BUILD_TESTS)
                 src/statistics/numelyx_core_rng_sampling.c
             )
             target_compile_definitions(${test_name} PRIVATE NUMERUS_RNG_TEST_ALLOCATOR)
+        endif()
+
+        if(test_name STREQUAL "lifetime_test")
+            target_link_libraries(${test_name} PRIVATE Threads::Threads)
         endif()
 
         add_test(NAME ${test_name} COMMAND ${test_name})

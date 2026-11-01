@@ -801,29 +801,19 @@ int numelyx_core_matrix_create_block_grid_view(
 
     if (view->block_matrices == NULL || view->block_row_offsets == NULL ||
         view->block_column_offsets == NULL) {
-        numelyx_core_matrix_free(view->block_matrices);
-        numelyx_core_matrix_free(view->block_row_offsets);
-        numelyx_core_matrix_free(view->block_column_offsets);
-        numelyx_core_matrix_free(view);
+        numelyx_core_matrix_destroy(view);
         return NUMERUS_MATRIX_OUT_OF_MEMORY;
     }
 
     for (row = 0; row < block_count; row++) {
         status = numelyx_core_matrix_retain(blocks[row]);
         if (status != NUMERUS_MATRIX_SUCCESS) {
-            while (row > 0) {
-                row--;
-                numelyx_core_matrix_destroy(view->block_matrices[row]);
-            }
-            numelyx_core_matrix_free(view->block_matrices);
-            numelyx_core_matrix_free(view->block_row_offsets);
-            numelyx_core_matrix_free(view->block_column_offsets);
-            numelyx_core_matrix_free(view);
+            numelyx_core_matrix_destroy(view);
             return status;
         }
         view->block_matrices[row] = blocks[row];
+        view->block_count = row + 1;
     }
-    view->block_count = block_count;
 
     view->block_row_offsets[0] = 0;
     for (row = 0; row < block_row_count; row++) {

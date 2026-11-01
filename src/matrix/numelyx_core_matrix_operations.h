@@ -59,7 +59,7 @@ int numelyx_core_matrix_create_add(
 /**
  * Create a lazy element-wise difference of two equally sized Matrices.
  *
- * Both parent references are non-owning and must remain alive for the result's
+ * The result retains both parents for its
  * lifetime. Subtraction follows IEEE-754 double semantics.
  */
 int numelyx_core_matrix_create_subtract(

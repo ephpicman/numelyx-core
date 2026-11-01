@@ -12,7 +12,10 @@
 #include "numelyx_core_size.h"
 
 #include <math.h>
+#include <limits.h>
 #include <stdlib.h>
+
+#include <lapacke.h>
 
 # define matrix_cholesky_alloc(size) malloc(size)
 # define matrix_cholesky_free(pointer) free(pointer)
@@ -93,40 +96,80 @@ numelyx_core_matrix_status numelyx_core_matrix_cholesky(
         }
     }
 
-    for (row = 0; row < size; row++) {
-        for (column = 0; column <= row; column++) {
-            size_t k;
-            double value = work[row * size + column];
+    if (size <= (size_t) INT_MAX) {
+        lapack_int info = LAPACKE_dpotrf(
+            LAPACK_ROW_MAJOR, 'L',
+            (lapack_int) size, work, (lapack_int) size
+        );
 
-            for (k = 0; k < column; k++) {
-                value -= lower_values[row * size + k] *
-                    lower_values[column * size + k];
+        if (info < 0) {
+            status = NUMERUS_MATRIX_INVALID_ARGUMENT;
+            goto cleanup;
+        }
+        if (info > 0) {
+            status = NUMERUS_MATRIX_NOT_POSITIVE_DEFINITE;
+            goto cleanup;
+        }
+
+        for (row = 0; row < size; row++) {
+            double diagonal = work[row * size + row];
+            double pivot = diagonal * diagonal;
+
+            if (!isfinite(diagonal) || !isfinite(pivot)) {
+                status = NUMERUS_MATRIX_NON_FINITE;
+                goto cleanup;
+            }
+            if (pivot <= pivot_threshold) {
+                status = NUMERUS_MATRIX_NOT_POSITIVE_DEFINITE;
+                goto cleanup;
+            }
+
+            for (column = 0; column <= row; column++) {
+                double value = work[row * size + column];
                 if (!isfinite(value)) {
                     status = NUMERUS_MATRIX_NON_FINITE;
                     goto cleanup;
                 }
+                lower_values[row * size + column] = value;
             }
+        }
+    } else {
+        /* Retain the native reference path beyond LAPACK's 32-bit boundary. */
+        for (row = 0; row < size; row++) {
+            for (column = 0; column <= row; column++) {
+                size_t k;
+                double value = work[row * size + column];
 
-            if (row == column) {
-                if (value <= pivot_threshold) {
-                    status = NUMERUS_MATRIX_NOT_POSITIVE_DEFINITE;
-                    goto cleanup;
+                for (k = 0; k < column; k++) {
+                    value -= lower_values[row * size + k] *
+                        lower_values[column * size + k];
+                    if (!isfinite(value)) {
+                        status = NUMERUS_MATRIX_NON_FINITE;
+                        goto cleanup;
+                    }
                 }
-                lower_values[row * size + column] = sqrt(value);
-            } else {
-                double diagonal = lower_values[column * size + column];
-                double factor;
 
-                if (diagonal == 0.0) {
-                    status = NUMERUS_MATRIX_NOT_POSITIVE_DEFINITE;
-                    goto cleanup;
+                if (row == column) {
+                    if (value <= pivot_threshold) {
+                        status = NUMERUS_MATRIX_NOT_POSITIVE_DEFINITE;
+                        goto cleanup;
+                    }
+                    lower_values[row * size + column] = sqrt(value);
+                } else {
+                    double diagonal = lower_values[column * size + column];
+                    double factor;
+
+                    if (diagonal == 0.0) {
+                        status = NUMERUS_MATRIX_NOT_POSITIVE_DEFINITE;
+                        goto cleanup;
+                    }
+                    factor = value / diagonal;
+                    if (!isfinite(factor)) {
+                        status = NUMERUS_MATRIX_NON_FINITE;
+                        goto cleanup;
+                    }
+                    lower_values[row * size + column] = factor;
                 }
-                factor = value / diagonal;
-                if (!isfinite(factor)) {
-                    status = NUMERUS_MATRIX_NON_FINITE;
-                    goto cleanup;
-                }
-                lower_values[row * size + column] = factor;
             }
         }
     }

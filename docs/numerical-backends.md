@@ -20,7 +20,7 @@ vendor-specific routines are confined to the internal numerical layer.
 | Operation | Dispatch |
 | --- | --- |
 | Dense, finite matrix multiplication | CBLAS `cblas_dgemm` (row-major) |
-| Finite square LU factorization | LAPACKE `LAPACKE_dgetrf` (row-major) |
+| Nonsingular finite square LU factorization | LAPACKE `LAPACKE_dgetrf` (row-major) |
 | Cholesky factorization | LAPACKE `LAPACKE_dpotrf` (row-major), with Numelyx Core symmetry and scale-relative pivot checks |
 | Unpivoted reduced QR | LAPACKE `LAPACKE_dgeqrf` + `LAPACKE_dorgqr` (row-major) |
 | Reduced SVD | LAPACKE `LAPACKE_dgesdd` (row-major); one-sided Jacobi remains the non-convergence fallback |

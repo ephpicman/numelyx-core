@@ -83,7 +83,7 @@ int numelyx_core_matrix_create_rotate_90_counterclockwise(
  * @brief Create a lazy horizontal join of two Matrices.
  *
  * Both parents must have the same number of rows. The second Matrix is
- * appended to the right of the first. Neither parent is owned by the result.
+ * appended to the right of the first. The result retains both parents.
  */
 int numelyx_core_matrix_create_join_horizontal(
     numelyx_core_matrix *parent,
@@ -95,7 +95,7 @@ int numelyx_core_matrix_create_join_horizontal(
  * @brief Create a lazy vertical join of two Matrices.
  *
  * Both parents must have the same number of columns. The second Matrix is
- * appended below the first. Neither parent is owned by the result.
+ * appended below the first. The result retains both parents.
  */
 int numelyx_core_matrix_create_join_vertical(
     numelyx_core_matrix *parent,

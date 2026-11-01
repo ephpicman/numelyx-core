@@ -6,6 +6,7 @@
  */
 
 #include "numelyx_core_rng.h"
+#include "numelyx_core_rng_internal.h"
 #include "numelyx_core_size.h"
 
 #include <stdlib.h>
@@ -60,7 +61,7 @@ static numelyx_core_rng_status numelyx_core_rng_bounded_index(
     return NUMERUS_RNG_SUCCESS;
 }
 
-numelyx_core_rng_status numelyx_core_rng_sample_indices(
+static numelyx_core_rng_status rng_sample_indices_locked(
     numelyx_core_rng *rng,
     size_t population_size,
     size_t sample_size,
@@ -164,6 +165,30 @@ numelyx_core_rng_status numelyx_core_rng_sample_indices(
 
     *indices = values;
     return NUMERUS_RNG_SUCCESS;
+}
+
+
+numelyx_core_rng_status numelyx_core_rng_sample_indices(
+    numelyx_core_rng *rng,
+    size_t population_size,
+    size_t sample_size,
+    bool with_replacement,
+    size_t **indices
+)
+{
+    numelyx_core_rng_status status;
+
+    if (indices == NULL) return NUMERUS_RNG_INVALID_ARGUMENT;
+    *indices = NULL;
+    if (rng == NULL) return NUMERUS_RNG_INVALID_ARGUMENT;
+    if (!numelyx_core_rng_lock_internal(rng)) {
+        return NUMERUS_RNG_INVALID_ARGUMENT;
+    }
+    status = rng_sample_indices_locked(
+        rng, population_size, sample_size, with_replacement, indices
+    );
+    numelyx_core_rng_unlock_internal(rng);
+    return status;
 }
 
 void numelyx_core_rng_free_indices(size_t *indices)

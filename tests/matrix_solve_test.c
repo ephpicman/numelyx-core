@@ -337,7 +337,6 @@ static void test_structure_aware_dispatch(void)
 
 static void test_triangular_dispatch_preserves_numerical_rank(void)
 {
-    const double nearly_singular_diagonal[] = {1.0, 0.0, 0.0, 1e-16};
     const double rhs_values[] = {1.0, 1.0};
     numelyx_core_matrix *matrix = NULL;
     numelyx_core_matrix *rhs = NULL;
@@ -354,7 +353,6 @@ static void test_triangular_dispatch_preserves_numerical_rank(void)
 
     numelyx_core_matrix_destroy(rhs);
     numelyx_core_matrix_destroy(matrix);
-    (void) nearly_singular_diagonal;
 }
 
 int main(void)

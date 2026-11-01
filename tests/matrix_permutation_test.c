@@ -8,12 +8,12 @@
  * documentation. This file is test support, not runtime code.
  */
 
-#include "../numerus_matrix.h"
+#include "../numelyx_core_matrix.h"
 
 #include <assert.h>
 #include <stdio.h>
 
-static numerus_matrix_status fail_on_row_one(
+static numelyx_core_matrix_status fail_on_row_one(
     size_t row,
     size_t column,
     size_t *parent_row,
@@ -33,7 +33,7 @@ static numerus_matrix_status fail_on_row_one(
 }
 
 static int matrix_value_equals(
-    const numerus_matrix *matrix,
+    const numelyx_core_matrix *matrix,
     size_t row,
     size_t column,
     double expected
@@ -41,7 +41,7 @@ static int matrix_value_equals(
 {
     double actual = 0.0;
 
-    return numerus_matrix_get(
+    return numelyx_core_matrix_get(
         matrix, row, column, &actual
     ) == NUMERUS_MATRIX_SUCCESS && actual == expected;
 }
@@ -53,15 +53,15 @@ static void test_row_and_column_permutations(void)
     const size_t row_permutation[] = {2, 0, 1};
     const size_t column_permutation[] = {2, 0, 1};
     const size_t identity[] = {0, 1, 2};
-    numerus_matrix *rows = NULL;
-    numerus_matrix *columns = NULL;
-    numerus_matrix *permuted_rows = NULL;
-    numerus_matrix *permuted_columns = NULL;
-    numerus_matrix *identity_rows = NULL;
+    numelyx_core_matrix *rows = NULL;
+    numelyx_core_matrix *columns = NULL;
+    numelyx_core_matrix *permuted_rows = NULL;
+    numelyx_core_matrix *permuted_columns = NULL;
+    numelyx_core_matrix *identity_rows = NULL;
 
-    assert(numerus_matrix_create_dense(3, 2, row_values, &rows) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, row_values, &rows) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_permute_rows(
+    assert(numelyx_core_matrix_create_permute_rows(
         rows, row_permutation, 3, &permuted_rows
     ) == NUMERUS_MATRIX_SUCCESS);
     assert(matrix_value_equals(permuted_rows, 0, 0, 5.0));
@@ -69,14 +69,14 @@ static void test_row_and_column_permutations(void)
     assert(matrix_value_equals(permuted_rows, 1, 0, 1.0));
     assert(matrix_value_equals(permuted_rows, 2, 1, 4.0));
 
-    assert(numerus_matrix_create_permute_rows(
+    assert(numelyx_core_matrix_create_permute_rows(
         rows, identity, 3, &identity_rows
     ) == NUMERUS_MATRIX_SUCCESS);
     assert(matrix_value_equals(identity_rows, 2, 0, 5.0));
 
-    assert(numerus_matrix_create_dense(2, 3, column_values, &columns) ==
+    assert(numelyx_core_matrix_create_dense(2, 3, column_values, &columns) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_permute_columns(
+    assert(numelyx_core_matrix_create_permute_columns(
         columns, column_permutation, 3, &permuted_columns
     ) == NUMERUS_MATRIX_SUCCESS);
     assert(matrix_value_equals(permuted_columns, 0, 0, 3.0));
@@ -85,11 +85,11 @@ static void test_row_and_column_permutations(void)
     assert(matrix_value_equals(permuted_columns, 1, 0, 6.0));
     assert(matrix_value_equals(permuted_columns, 1, 2, 5.0));
 
-    numerus_matrix_destroy(permuted_columns);
-    numerus_matrix_destroy(columns);
-    numerus_matrix_destroy(identity_rows);
-    numerus_matrix_destroy(permuted_rows);
-    numerus_matrix_destroy(rows);
+    numelyx_core_matrix_destroy(permuted_columns);
+    numelyx_core_matrix_destroy(columns);
+    numelyx_core_matrix_destroy(identity_rows);
+    numelyx_core_matrix_destroy(permuted_rows);
+    numelyx_core_matrix_destroy(rows);
 }
 
 static void test_invalid_permutations_and_read_failure(void)
@@ -99,46 +99,46 @@ static void test_invalid_permutations_and_read_failure(void)
     const size_t out_of_range[] = {0, 1, 3};
     const size_t too_short[] = {0, 1};
     const size_t valid[] = {2, 1, 0};
-    numerus_matrix *root = NULL;
-    numerus_matrix *failing = NULL;
-    numerus_matrix *permuted = NULL;
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *failing = NULL;
+    numelyx_core_matrix *permuted = NULL;
     double value = 6543.25;
 
-    assert(numerus_matrix_create_dense(3, 2, values, &root) ==
+    assert(numelyx_core_matrix_create_dense(3, 2, values, &root) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_permute_rows(
+    assert(numelyx_core_matrix_create_permute_rows(
         root, duplicate, 3, &permuted
     ) == NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(permuted == NULL);
-    assert(numerus_matrix_create_permute_rows(
+    assert(numelyx_core_matrix_create_permute_rows(
         root, out_of_range, 3, &permuted
     ) == NUMERUS_MATRIX_OUT_OF_BOUNDS);
     assert(permuted == NULL);
-    assert(numerus_matrix_create_permute_rows(
+    assert(numelyx_core_matrix_create_permute_rows(
         root, too_short, 2, &permuted
     ) == NUMERUS_MATRIX_DIMENSION_MISMATCH);
     assert(permuted == NULL);
-    assert(numerus_matrix_create_permute_columns(
+    assert(numelyx_core_matrix_create_permute_columns(
         root, valid, 3, &permuted
     ) == NUMERUS_MATRIX_DIMENSION_MISMATCH);
     assert(permuted == NULL);
-    assert(numerus_matrix_create_permute_rows(
+    assert(numelyx_core_matrix_create_permute_rows(
         root, valid, 3, NULL
     ) == NUMERUS_MATRIX_INVALID_ARGUMENT);
 
-    assert(numerus_matrix_create_from_parent_with_transforms(
+    assert(numelyx_core_matrix_create_from_parent_with_transforms(
         root, 3, 2, fail_on_row_one, NULL, NULL, &failing
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_permute_rows(
+    assert(numelyx_core_matrix_create_permute_rows(
         failing, valid, 3, &permuted
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_get(permuted, 1, 0, &value) ==
+    assert(numelyx_core_matrix_get(permuted, 1, 0, &value) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(value == 6543.25);
 
-    numerus_matrix_destroy(permuted);
-    numerus_matrix_destroy(failing);
-    numerus_matrix_destroy(root);
+    numelyx_core_matrix_destroy(permuted);
+    numelyx_core_matrix_destroy(failing);
+    numelyx_core_matrix_destroy(root);
 }
 
 int main(void)

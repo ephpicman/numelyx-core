@@ -23,18 +23,20 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libopenblas-dev liblapacke-dev
-      - name: Install BLAS/LAPACK dependencies (Windows)
+      - uses: mamba-org/setup-micromamba@v2
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          vcpkg install --triplet x64-windows
+        with:
+          environment-name: numelyx
+          create-args: >-
+            -c conda-forge
+            liblapacke
       - name: Configure (Ubuntu)
         if: runner.os == 'Linux'
         run: cmake -S . -B build -DNUMELYX_BUILD_TESTS=ON
       - name: Configure (Windows)
         if: runner.os == 'Windows'
-        shell: pwsh
-        run: cmake -S . -B build -DNUMELYX_BUILD_TESTS=ON -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=x64-windows
+        shell: bash -el {0}
+        run: cmake -S . -B build -DNUMELYX_BUILD_TESTS=ON -DCMAKE_PREFIX_PATH="$CONDA_PREFIX/Library"
       - name: Build
         run: cmake --build build --config Debug --parallel 2
       - name: Test

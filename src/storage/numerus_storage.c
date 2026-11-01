@@ -15,17 +15,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifndef NUMERUS_STORAGE_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define numerus_alloc(size) emalloc(size)
-# define numerus_calloc(count, size) ecalloc((count), (size))
-# define numerus_free(ptr) efree(ptr)
-#else
-# define numerus_alloc(size) malloc(size)
-# define numerus_calloc(count, size) calloc((count), (size))
-# define numerus_free(ptr) free(ptr)
-#endif
+#define numerus_alloc(size) malloc(size)
+#define numerus_calloc(count, size) calloc((count), (size))
+#define numerus_free(ptr) free(ptr)
 
 /* The tag determines which union member is active. Keep this representation
  * private: all callers must go through the validated constructor/accessor API.

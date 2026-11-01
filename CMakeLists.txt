@@ -28,14 +28,6 @@ target_include_directories(numelyx_core
         "${CMAKE_CURRENT_SOURCE_DIR}/src/statistics"
 )
 
-# Standalone mode deliberately uses the C runtime allocator, not Zend MM.
-target_compile_definitions(numelyx_core PRIVATE
-    NUMERUS_STORAGE_USE_LIBC_ALLOC
-    NUMERUS_MATRIX_USE_LIBC_ALLOC
-    NUMERUS_RNG_USE_LIBC_ALLOC
-    NUMERUS_PROBABILITY_USE_LIBC_ALLOC
-    NUMERUS_OPTIMIZER_USE_LIBC_ALLOC
-)
 
 if(UNIX)
     target_link_libraries(numelyx_core PUBLIC m)

@@ -4,8 +4,8 @@
  *
  * Matrix is the logical layer above immutable Storage. A root Matrix owns its
  * Storage; a derived Matrix references a parent Matrix and delegates element
- * reads to it. Parent relationships are non-owning and are intended to be
- * managed by the eventual PHP object layer.
+ * reads to it. Parent relationships are non-owning and are managed by
+ * the application that owns the Matrix graph.
  */
 #ifndef NUMERUS_MATRIX_TYPES_H
 #define NUMERUS_MATRIX_TYPES_H

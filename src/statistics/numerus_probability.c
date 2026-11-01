@@ -19,11 +19,6 @@ void *numerus_probability_test_alloc(size_t size);
 void numerus_probability_test_free(void *pointer);
 # define numerus_probability_alloc(size) numerus_probability_test_alloc(size)
 # define numerus_probability_free(pointer) numerus_probability_test_free(pointer)
-#elif !defined(NUMERUS_PROBABILITY_USE_LIBC_ALLOC)
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define numerus_probability_alloc(size) emalloc(size)
-# define numerus_probability_free(pointer) efree(pointer)
 #else
 # define numerus_probability_alloc(size) malloc(size)
 # define numerus_probability_free(pointer) free(pointer)

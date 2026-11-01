@@ -152,16 +152,9 @@ int numerus_matrix_create_slice_view(
 );
 
 
-#ifndef NUMERUS_MATRIX_USE_LIBC_ALLOC
-# include "php.h"
-# include "Zend/zend_alloc.h"
-# define numerus_matrix_alloc(size) emalloc(size)
-# define numerus_matrix_free(ptr) efree(ptr)
-#else
-# include <stdlib.h>
-# define numerus_matrix_alloc(size) malloc(size)
-# define numerus_matrix_free(ptr) free(ptr)
-#endif
+#include <stdlib.h>
+#define numerus_matrix_alloc(size) malloc(size)
+#define numerus_matrix_free(ptr) free(ptr)
 
 struct numerus_matrix {
     size_t rows;

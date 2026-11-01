@@ -125,6 +125,36 @@ static void test_diagonal_rank_fast_path_contract(void)
     assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
     assert(rank == 1);
     numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_identity(3, &matrix) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 3);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_scaled_identity(3, -4.0, &matrix) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 3);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_scaled_identity(3, 0.0, &matrix) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 0);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_zero(2, 4, &matrix) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 0);
+    numelyx_core_matrix_destroy(matrix);
+
+    assert(numelyx_core_matrix_create_scaled_identity(0, 7.0, &matrix) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_rank(matrix, &rank) == NUMERUS_MATRIX_SUCCESS);
+    assert(rank == 0);
+    numelyx_core_matrix_destroy(matrix);
 }
 
 static void test_nonfinite_and_failure_paths(void)

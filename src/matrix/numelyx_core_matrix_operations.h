@@ -85,8 +85,8 @@ int numelyx_core_matrix_create_hadamard_product(
  * Create a lazy element-wise quotient of equally sized Matrices.
  *
  * Division follows IEEE-754 double semantics: zero divisors produce the
- * corresponding infinities or NaN rather than a Matrix status error. Both
- * parent references are non-owning and must remain alive for the result.
+ * corresponding infinities or NaN rather than a Matrix status error. The
+ * result retains both parents for its lifetime.
  */
 int numelyx_core_matrix_create_divide(
     numelyx_core_matrix *left,

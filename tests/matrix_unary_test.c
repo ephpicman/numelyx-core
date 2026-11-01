@@ -82,6 +82,7 @@ static void test_scalar_multiplication_and_negation_views(void)
 
     numelyx_core_matrix_destroy(nested);
     numelyx_core_matrix_destroy(negated_view);
+    numelyx_core_matrix_destroy(scaled_view);
 
     scaled_view = root;
     assert(numelyx_core_matrix_create_scale(NULL, 2.0, &scaled_view) ==

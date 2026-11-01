@@ -15,7 +15,7 @@
 #include <math.h>
 #include <stdlib.h>
 
-numelyx_core_matrix_status numelyx_core_matrix_inverse(
+static numelyx_core_matrix_status matrix_inverse_locked(
     const numelyx_core_matrix *matrix,
     numelyx_core_matrix **inverse
 )
@@ -177,5 +177,25 @@ failure:
     numelyx_core_matrix_lu_destroy(factorization);
     free(work);
     free(values);
+    return status;
+}
+
+numelyx_core_matrix_status numelyx_core_matrix_inverse(
+    const numelyx_core_matrix *matrix,
+    numelyx_core_matrix **inverse
+)
+{
+    numelyx_core_matrix_status status;
+    numelyx_core_matrix *mutable_matrix =
+        (numelyx_core_matrix *) matrix;
+
+    if (matrix == NULL || inverse == NULL) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    if (!numelyx_core_mutex_lock(&mutable_matrix->cache_mutex)) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    status = matrix_inverse_locked(matrix, inverse);
+    (void) numelyx_core_mutex_unlock(&mutable_matrix->cache_mutex);
     return status;
 }

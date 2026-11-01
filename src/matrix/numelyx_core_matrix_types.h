@@ -160,7 +160,9 @@ typedef numelyx_core_matrix_status (*numelyx_core_coordinate_transform_fn)(
  * The callback writes result only when it returns NUMERUS_MATRIX_SUCCESS.
  * The callback must be deterministic and must not depend on mutable external
  * state. The context is borrowed, read-only, and must remain valid and
- * logically unchanged for the lifetime of the child Matrix.
+ * logically unchanged for the lifetime of the child Matrix. Because a Matrix
+ * may be read concurrently, callback implementations and their contexts must
+ * be safe for concurrent invocation.
  */
 typedef numelyx_core_matrix_status (*numelyx_core_value_transform_fn)(
     size_t row,

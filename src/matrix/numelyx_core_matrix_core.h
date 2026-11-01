@@ -103,8 +103,8 @@ numelyx_core_storage_kind numelyx_core_matrix_storage_kind(
  * @brief Retain a Matrix reference.
  *
  * The caller must already hold a valid reference. The operation fails rather
- * than overflowing the reference counter. Reference counting is not currently
- * thread-safe; callers must externally synchronize concurrent retain/release.
+ * than overflowing the reference counter. Reference counting is atomic and supports concurrent retain/release, provided
+ * each caller already owns a valid reference for the duration of the operation.
  */
 numelyx_core_matrix_status numelyx_core_matrix_retain(
     numelyx_core_matrix *matrix

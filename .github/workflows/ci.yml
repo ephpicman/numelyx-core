@@ -24,3 +24,18 @@ jobs:
         run: cmake --build build --config Debug --parallel 2
       - name: Test
         run: ctest --test-dir build -C Debug --output-on-failure
+
+  thread-sanitizer:
+    name: ThreadSanitizer (Ubuntu / Clang)
+    runs-on: ubuntu-latest
+    env:
+      CC: clang
+      TSAN_OPTIONS: halt_on_error=1:second_deadlock_stack=1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure with ThreadSanitizer
+        run: cmake -S . -B build-tsan -DNUMELYX_BUILD_TESTS=ON -DNUMELYX_ENABLE_TSAN=ON
+      - name: Build instrumented tests
+        run: cmake --build build-tsan --config Debug --parallel 2
+      - name: Run instrumented tests
+        run: ctest --test-dir build-tsan -C Debug --output-on-failure

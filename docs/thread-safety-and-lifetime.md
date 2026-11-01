@@ -26,9 +26,10 @@ makes the fully initialized object visible to the receiving thread; retain is
 not a substitute for publishing or queue synchronization.
 
 The final release invokes the object's destructor exactly once. Destructors
-release the references they own to dependencies. Borrowed pointers and
-callback contexts are not retained and must remain valid under their
-documented borrowing contracts.
+release the references they own to dependencies. The dependency graph must be
+acyclic: reference counting does not collect ownership cycles. Borrowed
+pointers and callback contexts are not retained and must remain valid under
+their documented borrowing contracts.
 
 ## Matrix caches
 

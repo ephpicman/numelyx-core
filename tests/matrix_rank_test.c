@@ -99,8 +99,8 @@ static void test_scale_aware_threshold(void)
 
 static void test_diagonal_rank_fast_path_contract(void)
 {
-    const double full_values[] = {1e100, 2e100};
-    const double deficient_values[] = {1.0, 1e-12};
+    const double full_values[] = {1e100, 0.0, 0.0, 2e100};
+    const double deficient_values[] = {1.0, 0.0, 0.0, 1e-12};
     const double rectangular_values[] = {0.0, 0.0, 0.0, 3.0, 0.0, 0.0};
     numelyx_core_matrix *matrix = NULL;
     size_t rank = 99;

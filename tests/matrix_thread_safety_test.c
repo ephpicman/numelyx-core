@@ -23,7 +23,7 @@ static int cache_worker(void *argument)
                 NUMERUS_MATRIX_SUCCESS ||
             numelyx_core_matrix_determinant(args->matrix, &determinant) !=
                 NUMERUS_MATRIX_SUCCESS ||
-            fabs(determinant - 9.0) > 1e-12 ||
+            fabs(determinant - 18.0) > 1e-12 ||
             numelyx_core_matrix_inverse(args->matrix, &inverse) !=
                 NUMERUS_MATRIX_SUCCESS ||
             inverse == NULL) {

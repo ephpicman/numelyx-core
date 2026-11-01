@@ -10,8 +10,7 @@
 /**
  * Create a lazy scalar-multiplication view.
  *
- * The scalar is copied into the view; the parent is borrowed and must outlive
- * the result. IEEE-754 multiplication semantics apply, including NaN and
+ * The scalar is copied into the view, and the result retains its parent. IEEE-754 multiplication semantics apply, including NaN and
  * infinities. The output pointer is set to NULL before work begins.
  */
 int numelyx_core_matrix_create_scale(
@@ -49,8 +48,7 @@ int numelyx_core_matrix_create_negate(
 /**
  * Create a lazy element-wise sum of two equally sized Matrices.
  *
- * Both parent references are non-owning and must remain alive for the result's
- * lifetime. Addition follows IEEE-754 double semantics.
+ * The result retains both parents for its lifetime. Addition follows IEEE-754 double semantics.
  */
 int numelyx_core_matrix_create_add(
     numelyx_core_matrix *left,
@@ -73,8 +71,8 @@ int numelyx_core_matrix_create_subtract(
 /**
  * Create a lazy Hadamard (element-wise) product of equally sized Matrices.
  *
- * This is element-wise multiplication, not matrix multiplication. Both parent
- * references are non-owning and must remain alive for the result's lifetime.
+ * This is element-wise multiplication, not matrix multiplication. The result
+ * retains both parents for its lifetime.
  * IEEE-754 double semantics apply.
  */
 int numelyx_core_matrix_create_hadamard_product(
@@ -129,7 +127,7 @@ int numelyx_core_matrix_create_clamp(
 
 /**
  * Create a lazy map view. Callback and context must remain deterministic and
- * logically unchanged for the view lifetime; parent is borrowed and must live.
+ * logically unchanged for the view lifetime; the result retains its parent.
  */
 int numelyx_core_matrix_create_map(
     const numelyx_core_matrix *parent, numelyx_core_value_transform_fn transform,
@@ -186,7 +184,7 @@ int numelyx_core_matrix_multiply(
  *
  * A positive or negative zero divisor is rejected with
  * NUMERUS_MATRIX_DIVISION_BY_ZERO. Other values use IEEE-754 double
- * division semantics. The parent is borrowed and must outlive the view.
+ * division semantics. The result retains its parent.
  */
 int numelyx_core_matrix_create_divide_scalar(
     numelyx_core_matrix *parent,

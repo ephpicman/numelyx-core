@@ -1031,7 +1031,7 @@ numelyx_core_matrix_status numelyx_core_matrix_get(
 }
 
 
-numelyx_core_matrix_status numelyx_core_matrix_get_flags(
+numelyx_core_matrix_status matrix_get_flags_locked(
     numelyx_core_matrix *matrix,
     numelyx_core_matrix_flags *flags
 )
@@ -1116,6 +1116,24 @@ numelyx_core_matrix_status numelyx_core_matrix_get_flags(
     return NUMERUS_MATRIX_SUCCESS;
 }
 
+numelyx_core_matrix_status numelyx_core_matrix_get_flags(
+    numelyx_core_matrix *matrix,
+    numelyx_core_matrix_flags *flags
+)
+{
+    numelyx_core_matrix_status status;
+
+    if (matrix == NULL || flags == NULL) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    if (!numelyx_core_mutex_lock(&matrix->cache_mutex)) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    status = matrix_get_flags_locked(matrix, flags);
+    (void) numelyx_core_mutex_unlock(&matrix->cache_mutex);
+    return status;
+}
+
 static numelyx_core_matrix_status matrix_determinant_from_triangular(
     numelyx_core_matrix *matrix,
     double *determinant
@@ -1135,7 +1153,7 @@ static numelyx_core_matrix_status matrix_determinant_from_triangular(
     return NUMERUS_MATRIX_SUCCESS;
 }
 
-numelyx_core_matrix_status numelyx_core_matrix_determinant(
+numelyx_core_matrix_status matrix_determinant_locked(
     numelyx_core_matrix *matrix,
     double *determinant
 )
@@ -1223,6 +1241,24 @@ cache_result:
     return NUMERUS_MATRIX_SUCCESS;
 }
 
+numelyx_core_matrix_status numelyx_core_matrix_determinant(
+    numelyx_core_matrix *matrix,
+    double *determinant
+)
+{
+    numelyx_core_matrix_status status;
+
+    if (matrix == NULL || determinant == NULL) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    if (!numelyx_core_mutex_lock(&matrix->cache_mutex)) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    status = matrix_determinant_locked(matrix, determinant);
+    (void) numelyx_core_mutex_unlock(&matrix->cache_mutex);
+    return status;
+}
+
 size_t numelyx_core_matrix_rows(const numelyx_core_matrix *matrix)
 {
     return matrix == NULL ? 0 : matrix->rows;
@@ -1258,7 +1294,7 @@ numelyx_core_storage_kind numelyx_core_matrix_storage_kind(
  * Cache population is not thread-safe; concurrent mutation of one Matrix's
  * lazy caches is outside the current API contract.
  */
-numelyx_core_matrix_status numelyx_core_matrix_get_cached_inverse(
+numelyx_core_matrix_status matrix_get_cached_inverse_locked(
     const numelyx_core_matrix *matrix,
     numelyx_core_matrix **inverse
 )
@@ -1278,7 +1314,27 @@ numelyx_core_matrix_status numelyx_core_matrix_get_cached_inverse(
     );
 }
 
-void numelyx_core_matrix_store_inverse_cache(
+numelyx_core_matrix_status numelyx_core_matrix_get_cached_inverse(
+    const numelyx_core_matrix *matrix,
+    numelyx_core_matrix **inverse
+)
+{
+    numelyx_core_matrix_status status;
+    numelyx_core_matrix *mutable_matrix =
+        (numelyx_core_matrix *) matrix;
+
+    if (matrix == NULL || inverse == NULL) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    if (!numelyx_core_mutex_lock(&mutable_matrix->cache_mutex)) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    status = matrix_get_cached_inverse_locked(matrix, inverse);
+    (void) numelyx_core_mutex_unlock(&mutable_matrix->cache_mutex);
+    return status;
+}
+
+void matrix_store_inverse_cache_locked(
     const numelyx_core_matrix *matrix,
     const double *values
 )
@@ -1311,7 +1367,21 @@ void numelyx_core_matrix_store_inverse_cache(
     mutable_matrix->cached_inverse_values = copy;
 }
 
-numelyx_core_matrix_status numelyx_core_matrix_get_or_factorize_lu(
+void numelyx_core_matrix_store_inverse_cache(
+    const numelyx_core_matrix *matrix,
+    const double *values
+)
+{
+    numelyx_core_matrix *mutable_matrix =
+        (numelyx_core_matrix *) matrix;
+
+    if (matrix == NULL) return;
+    if (!numelyx_core_mutex_lock(&mutable_matrix->cache_mutex)) return;
+    matrix_store_inverse_cache_locked(matrix, values);
+    (void) numelyx_core_mutex_unlock(&mutable_matrix->cache_mutex);
+}
+
+numelyx_core_matrix_status matrix_get_or_factorize_lu_locked(
     const numelyx_core_matrix *matrix,
     numelyx_core_matrix_lu_factorization **factorization
 )
@@ -1338,7 +1408,27 @@ numelyx_core_matrix_status numelyx_core_matrix_get_or_factorize_lu(
     return status;
 }
 
-numelyx_core_matrix_status numelyx_core_matrix_get_cached_lu(
+numelyx_core_matrix_status numelyx_core_matrix_get_or_factorize_lu(
+    const numelyx_core_matrix *matrix,
+    numelyx_core_matrix_lu_factorization **factorization
+)
+{
+    numelyx_core_matrix_status status;
+    numelyx_core_matrix *mutable_matrix =
+        (numelyx_core_matrix *) matrix;
+
+    if (matrix == NULL || factorization == NULL) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    if (!numelyx_core_mutex_lock(&mutable_matrix->cache_mutex)) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    status = matrix_get_or_factorize_lu_locked(matrix, factorization);
+    (void) numelyx_core_mutex_unlock(&mutable_matrix->cache_mutex);
+    return status;
+}
+
+numelyx_core_matrix_status matrix_get_cached_lu_locked(
     const numelyx_core_matrix *matrix,
     numelyx_core_matrix_lu_factorization **factorization
 )
@@ -1363,7 +1453,27 @@ numelyx_core_matrix_status numelyx_core_matrix_get_cached_lu(
     return status;
 }
 
-void numelyx_core_matrix_store_lu_cache(
+numelyx_core_matrix_status numelyx_core_matrix_get_cached_lu(
+    const numelyx_core_matrix *matrix,
+    numelyx_core_matrix_lu_factorization **factorization
+)
+{
+    numelyx_core_matrix_status status;
+    numelyx_core_matrix *mutable_matrix =
+        (numelyx_core_matrix *) matrix;
+
+    if (matrix == NULL || factorization == NULL) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    if (!numelyx_core_mutex_lock(&mutable_matrix->cache_mutex)) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    status = matrix_get_cached_lu_locked(matrix, factorization);
+    (void) numelyx_core_mutex_unlock(&mutable_matrix->cache_mutex);
+    return status;
+}
+
+void matrix_store_lu_cache_locked(
     const numelyx_core_matrix *matrix,
     numelyx_core_matrix_lu_factorization *factorization
 )
@@ -1395,6 +1505,20 @@ void numelyx_core_matrix_store_lu_cache(
         return;
     }
     mutable_matrix->cached_lu_factorization = factorization;
+}
+
+void numelyx_core_matrix_store_lu_cache(
+    const numelyx_core_matrix *matrix,
+    numelyx_core_matrix_lu_factorization *factorization
+)
+{
+    numelyx_core_matrix *mutable_matrix =
+        (numelyx_core_matrix *) matrix;
+
+    if (matrix == NULL) return;
+    if (!numelyx_core_mutex_lock(&mutable_matrix->cache_mutex)) return;
+    matrix_store_lu_cache_locked(matrix, factorization);
+    (void) numelyx_core_mutex_unlock(&mutable_matrix->cache_mutex);
 }
 
 numelyx_core_matrix_status numelyx_core_matrix_retain(

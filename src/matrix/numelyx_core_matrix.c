@@ -226,9 +226,16 @@ int numelyx_core_matrix_allocate(numelyx_core_matrix **matrix)
         return NUMERUS_MATRIX_OUT_OF_MEMORY;
     }
 
+    if (!numelyx_core_mutex_init(&(*matrix)->cache_mutex)) {
+        numelyx_core_matrix_free(*matrix);
+        *matrix = NULL;
+        return NUMERUS_MATRIX_OUT_OF_MEMORY;
+    }
+
     if (numelyx_core_lifetime_init(
             &(*matrix)->lifetime, numelyx_core_matrix_destroy_final
         ) != NUMELYX_CORE_LIFETIME_SUCCESS) {
+        numelyx_core_mutex_destroy(&(*matrix)->cache_mutex);
         numelyx_core_matrix_free(*matrix);
         *matrix = NULL;
         return NUMERUS_MATRIX_INVALID_ARGUMENT;
@@ -1434,6 +1441,7 @@ static void numelyx_core_matrix_destroy_final(void *object)
     numelyx_core_matrix_free(matrix->selection_indices);
     numelyx_core_matrix_free(matrix->block_row_offsets);
     numelyx_core_matrix_free(matrix->block_column_offsets);
+    numelyx_core_mutex_destroy(&matrix->cache_mutex);
     numelyx_core_matrix_free(matrix);
 
     numelyx_core_matrix_destroy(parent);

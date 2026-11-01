@@ -9,6 +9,7 @@
 
 #include "numelyx_core_matrix_lu.h"
 #include "numelyx_core_size.h"
+#include "numelyx_core_lifetime.h"
 
 #include <math.h>
 #include <stdint.h>
@@ -23,38 +24,49 @@ struct numelyx_core_matrix_lu_factorization {
     size_t *permutation;
     double *values;
     int permutation_sign;
-    size_t reference_count;
+    numelyx_core_lifetime lifetime;
 };
+
+static void matrix_lu_destroy_final(void *object)
+{
+    numelyx_core_matrix_lu_factorization *factorization =
+        (numelyx_core_matrix_lu_factorization *) object;
+
+    matrix_lu_free(factorization->values);
+    matrix_lu_free(factorization->permutation);
+    matrix_lu_free(factorization);
+}
 
 numelyx_core_matrix_status numelyx_core_matrix_lu_retain(
     numelyx_core_matrix_lu_factorization *factorization
 )
 {
+    numelyx_core_lifetime_status status;
+
     if (factorization == NULL) {
         return NUMERUS_MATRIX_INVALID_ARGUMENT;
     }
-    if (factorization->reference_count == SIZE_MAX) {
-        return NUMERUS_MATRIX_OVERFLOW;
+
+    status = numelyx_core_lifetime_retain(&factorization->lifetime);
+    switch (status) {
+        case NUMELYX_CORE_LIFETIME_SUCCESS:
+            return NUMERUS_MATRIX_SUCCESS;
+        case NUMELYX_CORE_LIFETIME_OVERFLOW:
+            return NUMERUS_MATRIX_OVERFLOW;
+        default:
+            return NUMERUS_MATRIX_INVALID_ARGUMENT;
     }
-    factorization->reference_count++;
-    return NUMERUS_MATRIX_SUCCESS;
 }
 
 void numelyx_core_matrix_lu_destroy(
     numelyx_core_matrix_lu_factorization *factorization
 )
 {
-    if (factorization == NULL) {
-        return;
+    if (factorization != NULL) {
+        (void) numelyx_core_lifetime_release(
+            &factorization->lifetime, factorization
+        );
     }
-    if (factorization->reference_count > 1) {
-        factorization->reference_count--;
-        return;
-    }
-
-    matrix_lu_free(factorization->values);
-    matrix_lu_free(factorization->permutation);
-    matrix_lu_free(factorization);
 }
 
 numelyx_core_matrix_status numelyx_core_matrix_lu_factorize(
@@ -93,9 +105,14 @@ numelyx_core_matrix_status numelyx_core_matrix_lu_factorize(
     if (result == NULL) {
         return NUMERUS_MATRIX_OUT_OF_MEMORY;
     }
+    if (numelyx_core_lifetime_init(
+            &result->lifetime, matrix_lu_destroy_final
+        ) != NUMELYX_CORE_LIFETIME_SUCCESS) {
+        matrix_lu_free(result);
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
     result->size = size;
     result->rank = 0;
-    result->reference_count = 1;
     result->permutation = NULL;
     result->values = NULL;
     result->permutation_sign = 1;

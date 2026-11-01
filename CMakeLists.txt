@@ -89,6 +89,7 @@ if(NUMELYX_BUILD_TESTS)
         endif()
 
         add_test(NAME ${test_name} COMMAND ${test_name})
+        set_tests_properties(${test_name} PROPERTIES TIMEOUT 60)
     endforeach()
 endif()
 

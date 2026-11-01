@@ -94,6 +94,31 @@ static void test_assemble_heterogeneous_block_grid(void)
     numelyx_core_matrix_destroy(a);
 }
 
+static void test_grid_retains_all_blocks(void)
+{
+    const double a_values[] = {3.0};
+    const double b_values[] = {7.0};
+    numelyx_core_matrix *a = NULL;
+    numelyx_core_matrix *b = NULL;
+    numelyx_core_matrix *blocks[2];
+    numelyx_core_matrix *grid = NULL;
+
+    assert(numelyx_core_matrix_create_dense(1, 1, a_values, &a) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_create_dense(1, 1, b_values, &b) ==
+        NUMERUS_MATRIX_SUCCESS);
+    blocks[0] = a;
+    blocks[1] = b;
+    assert(numelyx_core_matrix_create_block_grid(blocks, 1, 2, &grid) ==
+        NUMERUS_MATRIX_SUCCESS);
+
+    numelyx_core_matrix_destroy(a);
+    numelyx_core_matrix_destroy(b);
+    assert(matrix_value_equals(grid, 0, 0, 3.0));
+    assert(matrix_value_equals(grid, 0, 1, 7.0));
+    numelyx_core_matrix_destroy(grid);
+}
+
 static void test_validation_and_overflow(void)
 {
     const double values[] = {1, 2};
@@ -189,6 +214,7 @@ static void test_parent_error_propagation(void)
 int main(void)
 {
     test_assemble_heterogeneous_block_grid();
+    test_grid_retains_all_blocks();
     test_validation_and_overflow();
     test_parent_error_propagation();
     puts("Matrix block-grid tests passed.");

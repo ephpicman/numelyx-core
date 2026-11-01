@@ -159,6 +159,7 @@ int numelyx_core_matrix_create_slice_view(
 struct numelyx_core_matrix {
     size_t rows;
     size_t columns;
+    size_t reference_count;
     numelyx_core_storage *storage;
     numelyx_core_matrix *parent;
     numelyx_core_matrix *parent2;
@@ -193,6 +194,7 @@ struct numelyx_core_matrix {
     size_t *block_column_offsets;
     size_t block_row_count;
     size_t block_column_count;
+    size_t block_count;
     bool diagonal_matrix_view;
     bool diagonal_offset_positive;
     size_t diagonal_offset_magnitude;

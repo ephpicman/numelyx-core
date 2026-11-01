@@ -1060,6 +1060,54 @@ static void test_join_error_propagation_and_horizontal_overflow(void)
 }
 
 
+static void test_parent_lifetime_is_retained(void)
+{
+    const double values[] = {2.0, 4.0, 6.0, 8.0};
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *view = NULL;
+    numelyx_core_matrix *nested = NULL;
+    double value = 0.0;
+
+    assert(numelyx_core_matrix_create_dense(2, 2, values, &root) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_create_transpose(root, &view) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_create_flip_rows(view, &nested) ==
+        NUMERUS_MATRIX_SUCCESS);
+
+    numelyx_core_matrix_destroy(root);
+    numelyx_core_matrix_destroy(view);
+    assert(numelyx_core_matrix_get(nested, 0, 0, &value) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(value == 4.0);
+    numelyx_core_matrix_destroy(nested);
+}
+
+static void test_two_parent_lifetime_is_retained(void)
+{
+    const double left_values[] = {1.0, 2.0};
+    const double right_values[] = {10.0, 20.0};
+    numelyx_core_matrix *left = NULL;
+    numelyx_core_matrix *right = NULL;
+    numelyx_core_matrix *joined = NULL;
+    double value = 0.0;
+
+    assert(numelyx_core_matrix_create_dense(1, 2, left_values, &left) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_create_dense(1, 2, right_values, &right) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_create_join_horizontal(
+        left, right, &joined
+    ) == NUMERUS_MATRIX_SUCCESS);
+
+    numelyx_core_matrix_destroy(left);
+    numelyx_core_matrix_destroy(right);
+    assert(numelyx_core_matrix_get(joined, 0, 3, &value) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(value == 20.0);
+    numelyx_core_matrix_destroy(joined);
+}
+
 static void test_epsilon_comparisons(void)
 {
     assert(numelyx_core_double_equals(1.0, 1.0 + 5e-10));
@@ -1340,6 +1388,8 @@ int main(void)
     test_transform_error_propagation();
     test_matrix_joins();
     test_join_error_propagation_and_horizontal_overflow();
+    test_parent_lifetime_is_retained();
+    test_two_parent_lifetime_is_retained();
     test_validation();
     test_cached_analysis();
     test_flag_cache_and_shared_symmetry_scan();

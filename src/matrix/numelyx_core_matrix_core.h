@@ -100,10 +100,23 @@ numelyx_core_storage_kind numelyx_core_matrix_storage_kind(
 );
 
 /**
- * @brief Release a Matrix object.
+ * @brief Retain a Matrix reference.
  *
- * A root Matrix releases its owned Storage. A child Matrix only releases its
- * own Matrix object; its parent remains untouched.
+ * The caller must already hold a valid reference. The operation fails rather
+ * than overflowing the reference counter. Reference counting is not currently
+ * thread-safe; callers must externally synchronize concurrent retain/release.
+ */
+numelyx_core_matrix_status numelyx_core_matrix_retain(
+    numelyx_core_matrix *matrix
+);
+
+/**
+ * @brief Release one caller-owned Matrix reference.
+ *
+ * A Matrix is reclaimed only after its final reference is released. Parent
+ * references held by derived views are released automatically during final
+ * reclamation. Passing NULL is a no-op. Releasing the same reference twice is
+ * invalid; callers must not use a pointer after releasing its last reference.
  */
 void numelyx_core_matrix_destroy(numelyx_core_matrix *matrix);
 

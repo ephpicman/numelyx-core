@@ -226,6 +226,7 @@ int numelyx_core_matrix_allocate(numelyx_core_matrix **matrix)
 
     (*matrix)->rows = 0;
     (*matrix)->columns = 0;
+    (*matrix)->reference_count = 1;
     (*matrix)->storage = NULL;
     (*matrix)->parent = NULL;
     (*matrix)->parent2 = NULL;
@@ -260,6 +261,7 @@ int numelyx_core_matrix_allocate(numelyx_core_matrix **matrix)
     (*matrix)->block_column_offsets = NULL;
     (*matrix)->block_row_count = 0;
     (*matrix)->block_column_count = 0;
+    (*matrix)->block_count = 0;
     (*matrix)->diagonal_matrix_view = false;
     (*matrix)->diagonal_offset_positive = true;
     (*matrix)->diagonal_offset_magnitude = 0;
@@ -471,6 +473,12 @@ int numelyx_core_matrix_create_from_parent_with_transforms(
 
     status = numelyx_core_matrix_allocate(&result);
     if (status != NUMERUS_MATRIX_SUCCESS) {
+        return status;
+    }
+
+    status = numelyx_core_matrix_retain(parent);
+    if (status != NUMERUS_MATRIX_SUCCESS) {
+        numelyx_core_matrix_free(result);
         return status;
     }
 
@@ -1373,21 +1381,61 @@ void numelyx_core_matrix_store_lu_cache(
     mutable_matrix->cached_lu_factorization = factorization;
 }
 
+numelyx_core_matrix_status numelyx_core_matrix_retain(
+    numelyx_core_matrix *matrix
+)
+{
+    if (matrix == NULL || matrix->reference_count == 0) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    if (matrix->reference_count == SIZE_MAX) {
+        return NUMERUS_MATRIX_OVERFLOW;
+    }
+
+    matrix->reference_count++;
+    return NUMERUS_MATRIX_SUCCESS;
+}
+
 void numelyx_core_matrix_destroy(numelyx_core_matrix *matrix)
 {
+    numelyx_core_matrix *parent;
+    numelyx_core_matrix *parent2;
+    numelyx_core_matrix **block_matrices;
+    size_t block_count;
+    size_t index;
+
     if (matrix == NULL) {
         return;
     }
 
-    if (matrix->parent == NULL) {
+    if (matrix->reference_count == 0) {
+        return;
+    }
+    matrix->reference_count--;
+    if (matrix->reference_count != 0) {
+        return;
+    }
+
+    parent = matrix->parent;
+    parent2 = matrix->parent2;
+    block_matrices = matrix->block_matrices;
+    block_count = matrix->block_count;
+
+    if (parent == NULL) {
         numelyx_core_storage_destroy(matrix->storage);
     }
 
     numelyx_core_matrix_lu_destroy(matrix->cached_lu_factorization);
     numelyx_core_matrix_free(matrix->cached_inverse_values);
     numelyx_core_matrix_free(matrix->selection_indices);
-    numelyx_core_matrix_free(matrix->block_matrices);
     numelyx_core_matrix_free(matrix->block_row_offsets);
     numelyx_core_matrix_free(matrix->block_column_offsets);
     numelyx_core_matrix_free(matrix);
+
+    numelyx_core_matrix_destroy(parent);
+    numelyx_core_matrix_destroy(parent2);
+    for (index = 0; index < block_count; index++) {
+        numelyx_core_matrix_destroy(block_matrices[index]);
+    }
+    numelyx_core_matrix_free(block_matrices);
 }

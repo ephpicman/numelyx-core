@@ -16,7 +16,11 @@
 #include <limits.h>
 #include <stdlib.h>
 
-#include <lapacke.h>
+#ifdef _WIN32
+# include <mkl.h>
+#else
+# include <lapacke.h>
+#endif
 
 # define matrix_lu_alloc(size) malloc(size)
 # define matrix_lu_free(ptr) free(ptr)

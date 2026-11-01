@@ -65,7 +65,10 @@ typedef struct {
     double finite_difference_relative_step;
 } numelyx_core_optimizer_options;
 
-/** Opaque result owning the last accepted parameter vector. */
+/**
+ * Opaque immutable result owning the last accepted parameter vector.
+ * Concurrent getters are safe while each reader holds a retained reference.
+ */
 typedef struct numelyx_core_optimizer_result numelyx_core_optimizer_result;
 
 /** Fill conservative v1 defaults; returns INVALID_ARGUMENT for a NULL output. */

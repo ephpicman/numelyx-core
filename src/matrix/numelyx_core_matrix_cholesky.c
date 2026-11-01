@@ -102,6 +102,11 @@ numelyx_core_matrix_status numelyx_core_matrix_cholesky(
             (lapack_int) size, work, (lapack_int) size
         );
 
+        if (info == LAPACK_WORK_MEMORY_ERROR ||
+            info == LAPACK_TRANSPOSE_MEMORY_ERROR) {
+            status = NUMERUS_MATRIX_OUT_OF_MEMORY;
+            goto cleanup;
+        }
         if (info < 0) {
             status = NUMERUS_MATRIX_INVALID_ARGUMENT;
             goto cleanup;

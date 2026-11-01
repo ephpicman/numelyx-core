@@ -164,6 +164,140 @@ static numelyx_core_matrix_status matrix_is_finite_nonnegative(
     return NUMERUS_MATRIX_SUCCESS;
 }
 
+
+/* Exact diagonal detection is separate from tolerance-based cached flags. */
+static numelyx_core_matrix_status matrix_matches_diagonal(
+    const numelyx_core_matrix *matrix,
+    bool *matches
+)
+{
+    size_t row;
+    size_t column;
+
+    if (matrix == NULL || matches == NULL) {
+        return NUMERUS_MATRIX_INVALID_ARGUMENT;
+    }
+    if (numelyx_core_matrix_rows(matrix) !=
+        numelyx_core_matrix_columns(matrix)) {
+        *matches = false;
+        return NUMERUS_MATRIX_SUCCESS;
+    }
+
+    for (row = 0; row < numelyx_core_matrix_rows(matrix); row++) {
+        for (column = 0; column < numelyx_core_matrix_columns(matrix); column++) {
+            double value;
+            numelyx_core_matrix_status status;
+
+            if (row == column) {
+                continue;
+            }
+            status = numelyx_core_matrix_get(matrix, row, column, &value);
+            if (status != NUMERUS_MATRIX_SUCCESS) {
+                return status;
+            }
+            if (value != 0.0 || signbit(value)) {
+                *matches = false;
+                return NUMERUS_MATRIX_SUCCESS;
+            }
+        }
+    }
+
+    *matches = true;
+    return NUMERUS_MATRIX_SUCCESS;
+}
+
+/*
+ * A diagonal operand reduces GEMM to row/column scaling. Restrict this
+ * shortcut to finite nonnegative operands so omitted zero products preserve
+ * the scalar kernel's IEEE-754 behavior and signed-zero results.
+ */
+static numelyx_core_matrix_status matrix_try_diagonal_product(
+    const numelyx_core_matrix *left,
+    const numelyx_core_matrix *right,
+    size_t rows,
+    size_t inner_dimension,
+    size_t columns,
+    numelyx_core_matrix **matrix,
+    bool *used
+)
+{
+    bool left_diagonal = false;
+    bool right_diagonal = false;
+    bool eligible;
+    size_t row;
+    size_t column;
+    size_t count;
+    size_t bytes;
+    double *values = NULL;
+    numelyx_core_matrix_status status;
+
+    *used = false;
+    if (rows == inner_dimension) {
+        status = matrix_matches_diagonal(left, &left_diagonal);
+        if (status != NUMERUS_MATRIX_SUCCESS) return status;
+    }
+    if (inner_dimension == columns) {
+        status = matrix_matches_diagonal(right, &right_diagonal);
+        if (status != NUMERUS_MATRIX_SUCCESS) return status;
+    }
+    if (!left_diagonal && !right_diagonal) {
+        return NUMERUS_MATRIX_SUCCESS;
+    }
+
+    status = matrix_is_finite_nonnegative(left, &eligible);
+    if (status != NUMERUS_MATRIX_SUCCESS) return status;
+    if (!eligible) return NUMERUS_MATRIX_SUCCESS;
+    status = matrix_is_finite_nonnegative(right, &eligible);
+    if (status != NUMERUS_MATRIX_SUCCESS) return status;
+    if (!eligible) return NUMERUS_MATRIX_SUCCESS;
+
+    if (!numelyx_core_size_multiply(rows, columns, &count) ||
+        !numelyx_core_size_multiply(count, sizeof(*values), &bytes)) {
+        return NUMERUS_MATRIX_OVERFLOW;
+    }
+    values = numelyx_core_multiply_alloc(bytes);
+    if (values == NULL) return NUMERUS_MATRIX_OUT_OF_MEMORY;
+
+    if (left_diagonal) {
+        for (row = 0; row < rows; row++) {
+            double diagonal;
+            status = numelyx_core_matrix_get(left, row, row, &diagonal);
+            if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+            for (column = 0; column < columns; column++) {
+                double value;
+                status = numelyx_core_matrix_get(right, row, column, &value);
+                if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+                values[row * columns + column] = diagonal * value;
+            }
+        }
+    } else {
+        for (row = 0; row < rows; row++) {
+            for (column = 0; column < columns; column++) {
+                double diagonal;
+                double value;
+                status = numelyx_core_matrix_get(
+                    right, column, column, &diagonal
+                );
+                if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+                status = numelyx_core_matrix_get(
+                    left, row, column, &value
+                );
+                if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+                values[row * columns + column] = value * diagonal;
+            }
+        }
+    }
+
+    status = (numelyx_core_matrix_status) numelyx_core_matrix_create_dense(
+        rows, columns, values, matrix
+    );
+    if (status == NUMERUS_MATRIX_SUCCESS) *used = true;
+
+cleanup:
+    numelyx_core_multiply_free(values);
+    return status;
+}
+
 /*
  * Try a row-compressed multiplication path for sparse right operands. This
  * path is only equivalent to the generic loop when both operands are finite
@@ -425,6 +559,15 @@ int numelyx_core_matrix_multiply(
             if (status != NUMERUS_MATRIX_SUCCESS) return status;
             if (eligible) return create_dense_zero_result(rows, columns, matrix);
         }
+    }
+
+    {
+        bool used;
+        status = matrix_try_diagonal_product(
+            left, right, rows, inner_dimension, columns, matrix, &used
+        );
+        if (status != NUMERUS_MATRIX_SUCCESS) return status;
+        if (used) return NUMERUS_MATRIX_SUCCESS;
     }
 
     {

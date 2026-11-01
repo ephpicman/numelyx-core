@@ -62,6 +62,9 @@ typedef enum {
 /**
  * @brief Opaque immutable matrix storage object.
  *
+ * Storage supports atomic shared ownership. Concurrent readers are safe while
+ * each reader holds a retained reference.
+ *
  * The representation is private to numelyx_core_storage.c so other Numerus
  * components cannot couple themselves to a particular storage layout.
  */

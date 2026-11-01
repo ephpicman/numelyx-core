@@ -7,7 +7,7 @@
  */
 
 /* Compatibility include for native consumers; implementation lives under src/. */
-#ifndef NUMERUS_MATRIX_ROOT_COMPAT_H
-#define NUMERUS_MATRIX_ROOT_COMPAT_H
+#ifndef NUMELYX_CORE_MATRIX_ROOT_COMPAT_H
+#define NUMELYX_CORE_MATRIX_ROOT_COMPAT_H
 #include "src/matrix/numelyx_core_matrix.h"
 #endif

@@ -15,8 +15,8 @@ Requirements: CMake 3.16+ and a C11 compiler.
 
 ```sh
 cmake -S . -B build -DNUMELYX_BUILD_TESTS=ON
-cmake --build build --config Release --parallel
-ctest --test-dir build -C Release --output-on-failure
+cmake --build build --config Debug --parallel
+ctest --test-dir build -C Debug --output-on-failure
 ```
 
 Standalone builds use the C runtime allocator. The source retains conditional

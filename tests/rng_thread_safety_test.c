@@ -1,8 +1,8 @@
 #include "../numelyx_core_rng.h"
 
 #include <assert.h>
-#include <stdbool.h>
 #include <math.h>
+#include <stdbool.h>
 #include <stdatomic.h>
 #include <stddef.h>
 #include "test_threads.h"
@@ -29,6 +29,7 @@ static int rng_worker(void *argument)
         double uniform;
         double normal;
         size_t *indices = NULL;
+        size_t *replacement_indices = NULL;
         size_t index;
 
         if (numelyx_core_rng_next_u32(args->rng, &raw) != NUMERUS_RNG_SUCCESS ||
@@ -39,16 +40,30 @@ static int rng_worker(void *argument)
             numelyx_core_rng_sample_indices(
                 args->rng, 17, 5, false, &indices
             ) != NUMERUS_RNG_SUCCESS ||
-            indices == NULL) {
+            indices == NULL ||
+            numelyx_core_rng_sample_indices(
+                args->rng, 17, 5, true, &replacement_indices
+            ) != NUMERUS_RNG_SUCCESS ||
+            replacement_indices == NULL) {
             args->failed = 1;
             numelyx_core_rng_free_indices(indices);
+            numelyx_core_rng_free_indices(replacement_indices);
             break;
         }
 
         for (index = 0; index < 5; index++) {
-            if (indices[index] >= 17) args->failed = 1;
+            size_t other;
+            if (indices[index] >= 17 || replacement_indices[index] >= 17) {
+                args->failed = 1;
+                break;
+            }
+            for (other = index + 1; other < 5; other++) {
+                if (indices[index] == indices[other]) args->failed = 1;
+            }
         }
+
         numelyx_core_rng_free_indices(indices);
+        numelyx_core_rng_free_indices(replacement_indices);
         if (args->failed) break;
     }
 

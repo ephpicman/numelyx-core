@@ -130,18 +130,22 @@ numelyx_core_matrix_status numelyx_core_matrix_solve(
     }
     right_hand_sides = numelyx_core_matrix_columns(right_hand_side);
 
-    status = try_structured_solve(matrix, right_hand_side, solution, &handled);
-    if (status != NUMERUS_MATRIX_SUCCESS || handled) {
-        return status;
-    }
-
-    /* Preserve the existing numerical-rank contract for the general LU path. */
+    /*
+     * Keep the public numerical-rank/singularity contract independent of the
+     * selected factorization. In particular, exact triangular structure alone
+     * must not make a numerically rank-deficient system solvable.
+     */
     status = numelyx_core_matrix_rank(matrix, &rank);
     if (status != NUMERUS_MATRIX_SUCCESS) {
         return status;
     }
     if (rank != size) {
         return NUMERUS_MATRIX_SINGULAR;
+    }
+
+    status = try_structured_solve(matrix, right_hand_side, solution, &handled);
+    if (status != NUMERUS_MATRIX_SUCCESS || handled) {
+        return status;
     }
 
     if (!numelyx_core_size_multiply(size, right_hand_sides, &element_count) ||

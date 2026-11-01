@@ -284,7 +284,6 @@ static void test_sparse_right_product(void)
 
 static void test_diagonal_products(void)
 {
-    const double diagonal_values[] = {2, 0, 0, 3};
     const double dense_values[] = {1, 2, 3, 4};
     const double negative_diagonal_values[] = {-2, 0, 0, 3};
     numelyx_core_matrix *diagonal = NULL;
@@ -331,7 +330,6 @@ static void test_diagonal_products(void)
     numelyx_core_matrix_destroy(negative_diagonal);
     numelyx_core_matrix_destroy(dense);
     numelyx_core_matrix_destroy(diagonal);
-    (void) diagonal_values;
 }
 
 int main(void)

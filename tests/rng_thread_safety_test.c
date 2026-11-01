@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <math.h>
 #include <stddef.h>
-#include <threads.h>
+#include "test_threads.h"
 
 typedef struct {
     numelyx_core_rng *rng;
@@ -52,7 +52,7 @@ int main(void)
     enum { THREAD_COUNT = 8 };
     numelyx_core_rng *rng = NULL;
     rng_worker_args arguments[THREAD_COUNT];
-    thrd_t threads[THREAD_COUNT];
+    test_thread_t threads[THREAD_COUNT];
     size_t index;
 
     assert(numelyx_core_rng_create(12345, 6789, &rng) == NUMERUS_RNG_SUCCESS);
@@ -61,13 +61,12 @@ int main(void)
         arguments[index].rng = rng;
         arguments[index].failed = 0;
         assert(numelyx_core_rng_retain(rng) == NUMERUS_RNG_SUCCESS);
-        assert(thrd_create(&threads[index], rng_worker, &arguments[index]) ==
-            thrd_success);
+        assert(test_thread_create(&threads[index], rng_worker, &arguments[index]));
     }
 
     for (index = 0; index < THREAD_COUNT; index++) {
         int result = -1;
-        assert(thrd_join(threads[index], &result) == thrd_success);
+        assert(test_thread_join(&threads[index], &result));
         assert(result == 0);
         assert(arguments[index].failed == 0);
     }

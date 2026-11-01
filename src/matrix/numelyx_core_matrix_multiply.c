@@ -337,11 +337,10 @@ error:
 }
 
 /**
- * Compute a materialized matrix product using the standard triple loop.
- *
- * The result is independent dense Storage. Parent read errors are propagated,
- * and no partial result is published. Dot products accumulate in double
- * precision using the natural left-to-right order.
+ * Compute a materialized matrix product using structural fast paths, CBLAS,
+ * or the native triple loop. The result is independent dense Storage. Parent
+ * read errors are propagated and no partial result is published. CBLAS may
+ * use a different floating-point reduction order than the native kernel.
  */
 int numelyx_core_matrix_multiply(
     const numelyx_core_matrix *left,

@@ -1291,8 +1291,9 @@ numelyx_core_storage_kind numelyx_core_matrix_storage_kind(
 /*
  * Numerical caches own bounded values/factorizations, contain no parent
  * references, and are destroyed with their owner.
- * Cache population is not thread-safe; concurrent mutation of one Matrix's
- * lazy caches is outside the current API contract.
+ * All lazy cache reads, computation, and publication are serialized by the
+ * owning Matrix's recursive cache mutex. Different Matrix objects remain
+ * independently concurrent.
  */
 numelyx_core_matrix_status matrix_get_cached_inverse_locked(
     const numelyx_core_matrix *matrix,

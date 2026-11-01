@@ -8,7 +8,7 @@
  * documentation. This file is test support, not runtime code.
  */
 
-#include "../numerus_matrix.h"
+#include "../numelyx_core_matrix.h"
 
 #include <assert.h>
 #include <math.h>
@@ -16,7 +16,7 @@
 #include <stdio.h>
 
 static int matrix_value_equals(
-    const numerus_matrix *matrix,
+    const numelyx_core_matrix *matrix,
     size_t row,
     size_t column,
     double expected
@@ -24,12 +24,12 @@ static int matrix_value_equals(
 {
     double actual = 0.0;
 
-    return numerus_matrix_get(
+    return numelyx_core_matrix_get(
         matrix, row, column, &actual
     ) == NUMERUS_MATRIX_SUCCESS && actual == expected;
 }
 
-static numerus_matrix_status reject_coordinates(
+static numelyx_core_matrix_status reject_coordinates(
     size_t row,
     size_t column,
     size_t *parent_row,
@@ -56,20 +56,20 @@ static void test_kronecker_layout(void)
         0, 15, 0, 20,
         18, 21, 24, 28
     };
-    numerus_matrix *left = NULL;
-    numerus_matrix *right = NULL;
-    numerus_matrix *product = NULL;
+    numelyx_core_matrix *left = NULL;
+    numelyx_core_matrix *right = NULL;
+    numelyx_core_matrix *product = NULL;
 
-    assert(numerus_matrix_create_dense(2, 2, left_values, &left) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, left_values, &left) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(2, 2, right_values, &right) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, right_values, &right) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_kronecker_product(left, right, &product) ==
+    assert(numelyx_core_matrix_kronecker_product(left, right, &product) ==
         NUMERUS_MATRIX_SUCCESS);
 
-    assert(numerus_matrix_rows(product) == 4);
-    assert(numerus_matrix_columns(product) == 4);
-    assert(numerus_matrix_storage_kind(product) == NUMERUS_STORAGE_DENSE);
+    assert(numelyx_core_matrix_rows(product) == 4);
+    assert(numelyx_core_matrix_columns(product) == 4);
+    assert(numelyx_core_matrix_storage_kind(product) == NUMERUS_STORAGE_DENSE);
     for (size_t row = 0; row < 4; row++) {
         for (size_t column = 0; column < 4; column++) {
             assert(matrix_value_equals(
@@ -78,77 +78,77 @@ static void test_kronecker_layout(void)
         }
     }
 
-    numerus_matrix_destroy(right);
-    numerus_matrix_destroy(left);
+    numelyx_core_matrix_destroy(right);
+    numelyx_core_matrix_destroy(left);
     assert(matrix_value_equals(product, 3, 3, 28.0));
-    numerus_matrix_destroy(product);
+    numelyx_core_matrix_destroy(product);
 }
 
 static void test_overflow_and_read_failures(void)
 {
     const double root_values[] = {1, 2, 3, 4};
     const double right_values[] = {1, 2};
-    numerus_matrix *root = NULL;
-    numerus_matrix *right = NULL;
-    numerus_matrix *failing = NULL;
-    numerus_matrix *huge_left = NULL;
-    numerus_matrix *product = NULL;
+    numelyx_core_matrix *root = NULL;
+    numelyx_core_matrix *right = NULL;
+    numelyx_core_matrix *failing = NULL;
+    numelyx_core_matrix *huge_left = NULL;
+    numelyx_core_matrix *product = NULL;
 
-    assert(numerus_matrix_create_dense(2, 2, root_values, &root) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, root_values, &root) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(2, 1, right_values, &right) ==
+    assert(numelyx_core_matrix_create_dense(2, 1, right_values, &right) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_from_parent(
+    assert(numelyx_core_matrix_create_from_parent(
         root, SIZE_MAX, 1, &huge_left
     ) == NUMERUS_MATRIX_SUCCESS);
 
-    assert(numerus_matrix_kronecker_product(huge_left, right, &product) ==
+    assert(numelyx_core_matrix_kronecker_product(huge_left, right, &product) ==
         NUMERUS_MATRIX_OVERFLOW);
     assert(product == NULL);
 
-    assert(numerus_matrix_create_from_parent_with_transforms(
+    assert(numelyx_core_matrix_create_from_parent_with_transforms(
         root, 2, 2, reject_coordinates, NULL, NULL, &failing
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_kronecker_product(failing, root, &product) ==
+    assert(numelyx_core_matrix_kronecker_product(failing, root, &product) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(product == NULL);
-    assert(numerus_matrix_kronecker_product(root, failing, &product) ==
+    assert(numelyx_core_matrix_kronecker_product(root, failing, &product) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(product == NULL);
-    assert(numerus_matrix_kronecker_product(NULL, root, &product) ==
+    assert(numelyx_core_matrix_kronecker_product(NULL, root, &product) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(product == NULL);
-    assert(numerus_matrix_kronecker_product(root, root, NULL) ==
+    assert(numelyx_core_matrix_kronecker_product(root, root, NULL) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
 
-    numerus_matrix_destroy(huge_left);
-    numerus_matrix_destroy(failing);
-    numerus_matrix_destroy(right);
-    numerus_matrix_destroy(root);
+    numelyx_core_matrix_destroy(huge_left);
+    numelyx_core_matrix_destroy(failing);
+    numelyx_core_matrix_destroy(right);
+    numelyx_core_matrix_destroy(root);
 }
 
 static void test_non_finite_product(void)
 {
     const double zero[] = {0.0};
     const double infinity[] = {INFINITY};
-    numerus_matrix *left = NULL;
-    numerus_matrix *right = NULL;
-    numerus_matrix *product = NULL;
+    numelyx_core_matrix *left = NULL;
+    numelyx_core_matrix *right = NULL;
+    numelyx_core_matrix *product = NULL;
     double value = 0.0;
 
-    assert(numerus_matrix_create_dense(1, 1, zero, &left) ==
+    assert(numelyx_core_matrix_create_dense(1, 1, zero, &left) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(1, 1, infinity, &right) ==
+    assert(numelyx_core_matrix_create_dense(1, 1, infinity, &right) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_kronecker_product(left, right, &product) ==
+    assert(numelyx_core_matrix_kronecker_product(left, right, &product) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_get(product, 0, 0, &value) ==
+    assert(numelyx_core_matrix_get(product, 0, 0, &value) ==
         NUMERUS_MATRIX_SUCCESS);
     assert(isnan(value));
 
-    numerus_matrix_destroy(product);
-    numerus_matrix_destroy(right);
-    numerus_matrix_destroy(left);
+    numelyx_core_matrix_destroy(product);
+    numelyx_core_matrix_destroy(right);
+    numelyx_core_matrix_destroy(left);
 }
 
 
@@ -163,21 +163,21 @@ static void test_kronecker_sum(void)
         0, 3, 7, 12
     };
     const double rectangular_values[] = {1, 2, 3, 4, 5, 6};
-    numerus_matrix *left = NULL;
-    numerus_matrix *right = NULL;
-    numerus_matrix *rectangular = NULL;
-    numerus_matrix *failing = NULL;
-    numerus_matrix *sum = NULL;
+    numelyx_core_matrix *left = NULL;
+    numelyx_core_matrix *right = NULL;
+    numelyx_core_matrix *rectangular = NULL;
+    numelyx_core_matrix *failing = NULL;
+    numelyx_core_matrix *sum = NULL;
 
-    assert(numerus_matrix_create_dense(2, 2, left_values, &left) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, left_values, &left) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_dense(2, 2, right_values, &right) ==
+    assert(numelyx_core_matrix_create_dense(2, 2, right_values, &right) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_kronecker_sum(left, right, &sum) ==
+    assert(numelyx_core_matrix_kronecker_sum(left, right, &sum) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_rows(sum) == 4);
-    assert(numerus_matrix_columns(sum) == 4);
-    assert(numerus_matrix_storage_kind(sum) == NUMERUS_STORAGE_DENSE);
+    assert(numelyx_core_matrix_rows(sum) == 4);
+    assert(numelyx_core_matrix_columns(sum) == 4);
+    assert(numelyx_core_matrix_storage_kind(sum) == NUMERUS_STORAGE_DENSE);
     for (size_t row = 0; row < 4; row++) {
         for (size_t column = 0; column < 4; column++) {
             assert(matrix_value_equals(
@@ -186,28 +186,28 @@ static void test_kronecker_sum(void)
         }
     }
 
-    numerus_matrix_destroy(sum);
+    numelyx_core_matrix_destroy(sum);
     sum = NULL;
-    assert(numerus_matrix_create_dense(2, 3, rectangular_values, &rectangular) ==
+    assert(numelyx_core_matrix_create_dense(2, 3, rectangular_values, &rectangular) ==
         NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_create_from_parent_with_transforms(
+    assert(numelyx_core_matrix_create_from_parent_with_transforms(
         left, 2, 2, reject_coordinates, NULL, NULL, &failing
     ) == NUMERUS_MATRIX_SUCCESS);
-    assert(numerus_matrix_kronecker_sum(failing, right, &sum) ==
+    assert(numelyx_core_matrix_kronecker_sum(failing, right, &sum) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(sum == NULL);
-    assert(numerus_matrix_kronecker_sum(rectangular, right, &sum) ==
+    assert(numelyx_core_matrix_kronecker_sum(rectangular, right, &sum) ==
         NUMERUS_MATRIX_NOT_SQUARE);
     assert(sum == NULL);
-    assert(numerus_matrix_kronecker_sum(left, NULL, &sum) ==
+    assert(numelyx_core_matrix_kronecker_sum(left, NULL, &sum) ==
         NUMERUS_MATRIX_INVALID_ARGUMENT);
     assert(sum == NULL);
 
-    numerus_matrix_destroy(failing);
-    numerus_matrix_destroy(rectangular);
-    numerus_matrix_destroy(sum);
-    numerus_matrix_destroy(right);
-    numerus_matrix_destroy(left);
+    numelyx_core_matrix_destroy(failing);
+    numelyx_core_matrix_destroy(rectangular);
+    numelyx_core_matrix_destroy(sum);
+    numelyx_core_matrix_destroy(right);
+    numelyx_core_matrix_destroy(left);
 }
 
 int main(void)

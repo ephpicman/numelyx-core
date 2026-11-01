@@ -334,8 +334,32 @@ static void test_structure_aware_dispatch(void)
     numelyx_core_matrix_destroy(matrix);
 }
 
+
+static void test_triangular_dispatch_preserves_numerical_rank(void)
+{
+    const double nearly_singular_diagonal[] = {1.0, 0.0, 0.0, 1e-16};
+    const double rhs_values[] = {1.0, 1.0};
+    numelyx_core_matrix *matrix = NULL;
+    numelyx_core_matrix *rhs = NULL;
+    numelyx_core_matrix *solution = (void *) 1;
+
+    assert(numelyx_core_matrix_create_diagonal(
+        2, (const double[]){1.0, 1e-16}, &matrix
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_create_dense(2, 1, rhs_values, &rhs) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_solve(matrix, rhs, &solution) ==
+        NUMERUS_MATRIX_SINGULAR);
+    assert(solution == NULL);
+
+    numelyx_core_matrix_destroy(rhs);
+    numelyx_core_matrix_destroy(matrix);
+    (void) nearly_singular_diagonal;
+}
+
 int main(void)
 {
+    test_triangular_dispatch_preserves_numerical_rank();
     test_structure_aware_dispatch();
     test_solve_overflow_returns_nonfinite();
     test_one_by_one_system();

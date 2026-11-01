@@ -6,6 +6,12 @@
 #define NUMELYX_CORE_MUTEX_H
 
 #ifdef _WIN32
+# ifndef WIN32_LEAN_AND_MEAN
+#  define WIN32_LEAN_AND_MEAN
+# endif
+# ifndef NOMINMAX
+#  define NOMINMAX
+# endif
 # include <windows.h>
 typedef struct { CRITICAL_SECTION native; } numelyx_core_mutex;
 #else

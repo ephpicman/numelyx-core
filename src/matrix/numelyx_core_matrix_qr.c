@@ -13,7 +13,10 @@
 #include "numelyx_core_numeric.h"
 
 #include <math.h>
+#include <limits.h>
 #include <stdlib.h>
+
+#include <lapacke.h>
 
 # define matrix_qr_alloc(size) malloc(size)
 # define matrix_qr_free(pointer) free(pointer)
@@ -116,6 +119,83 @@ static numelyx_core_matrix_status matrix_qr_decompose_internal(
         for (column = 0; column < columns; column++) {
             permutation_values[column] = column;
         }
+    }
+
+    /*
+     * The public unpivoted QR operation uses LAPACK's Householder routines.
+     * Pivoted QR remains native because it has a separate rank-revealing
+     * permutation contract used by least-squares and subspace algorithms.
+     */
+    if (!pivot_columns &&
+        rows <= (size_t) INT_MAX &&
+        columns <= (size_t) INT_MAX) {
+        lapack_int info;
+        size_t k = rank_bound;
+
+        info = LAPACKE_dgeqrf(
+            LAPACK_ROW_MAJOR,
+            (lapack_int) rows,
+            (lapack_int) columns,
+            work,
+            (lapack_int) columns,
+            tau
+        );
+        if (info != 0) {
+            status = info > 0
+                ? NUMERUS_MATRIX_NO_CONVERGENCE
+                : NUMERUS_MATRIX_INVALID_ARGUMENT;
+            goto cleanup;
+        }
+
+        for (row = 0; row < k; row++) {
+            for (column = 0; column < columns; column++) {
+                r_values[row * columns + column] =
+                    row <= column ? work[row * columns + column] : 0.0;
+            }
+        }
+
+        info = LAPACKE_dorgqr(
+            LAPACK_ROW_MAJOR,
+            (lapack_int) rows,
+            (lapack_int) k,
+            (lapack_int) k,
+            work,
+            (lapack_int) columns,
+            tau
+        );
+        if (info != 0) {
+            status = info > 0
+                ? NUMERUS_MATRIX_NO_CONVERGENCE
+                : NUMERUS_MATRIX_INVALID_ARGUMENT;
+            goto cleanup;
+        }
+
+        for (row = 0; row < rows; row++) {
+            for (column = 0; column < k; column++) {
+                double value = work[row * columns + column];
+                if (!isfinite(value) ||
+                    !isfinite(r_values[row * columns + column])) {
+                    status = NUMERUS_MATRIX_NON_FINITE;
+                    goto cleanup;
+                }
+                q_values[row * k + column] = value;
+            }
+        }
+
+        status = (numelyx_core_matrix_status) numelyx_core_matrix_create_dense(
+            rows, k, q_values, q
+        );
+        if (status != NUMERUS_MATRIX_SUCCESS) goto cleanup;
+
+        status = (numelyx_core_matrix_status) numelyx_core_matrix_create_dense(
+            k, columns, r_values, r
+        );
+        if (status != NUMERUS_MATRIX_SUCCESS) {
+            numelyx_core_matrix_destroy(*q);
+            *q = NULL;
+            goto cleanup;
+        }
+        goto cleanup;
     }
 
     /*

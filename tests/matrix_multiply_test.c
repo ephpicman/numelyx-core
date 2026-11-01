@@ -281,8 +281,62 @@ static void test_sparse_right_product(void)
     numelyx_core_matrix_destroy(left);
 }
 
+
+static void test_diagonal_products(void)
+{
+    const double diagonal_values[] = {2, 0, 0, 3};
+    const double dense_values[] = {1, 2, 3, 4};
+    const double negative_diagonal_values[] = {-2, 0, 0, 3};
+    numelyx_core_matrix *diagonal = NULL;
+    numelyx_core_matrix *dense = NULL;
+    numelyx_core_matrix *negative_diagonal = NULL;
+    numelyx_core_matrix *product = NULL;
+
+    assert(numelyx_core_matrix_create_diagonal(
+        2, (const double[]){2, 3}, &diagonal
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_create_dense(
+        2, 2, dense_values, &dense
+    ) == NUMERUS_MATRIX_SUCCESS);
+
+    assert(numelyx_core_matrix_multiply(diagonal, dense, &product) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(matrix_value_equals(product, 0, 0, 2.0));
+    assert(matrix_value_equals(product, 0, 1, 4.0));
+    assert(matrix_value_equals(product, 1, 0, 9.0));
+    assert(matrix_value_equals(product, 1, 1, 12.0));
+    numelyx_core_matrix_destroy(product);
+    product = NULL;
+
+    assert(numelyx_core_matrix_multiply(dense, diagonal, &product) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(matrix_value_equals(product, 0, 0, 2.0));
+    assert(matrix_value_equals(product, 0, 1, 6.0));
+    assert(matrix_value_equals(product, 1, 0, 6.0));
+    assert(matrix_value_equals(product, 1, 1, 12.0));
+    numelyx_core_matrix_destroy(product);
+    product = NULL;
+
+    /* Negative values retain the generic IEEE-754 evaluation order. */
+    assert(numelyx_core_matrix_create_dense(
+        2, 2, negative_diagonal_values, &negative_diagonal
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_multiply(
+        negative_diagonal, dense, &product
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(matrix_value_equals(product, 0, 0, -2.0));
+    assert(matrix_value_equals(product, 1, 1, 12.0));
+
+    numelyx_core_matrix_destroy(product);
+    numelyx_core_matrix_destroy(negative_diagonal);
+    numelyx_core_matrix_destroy(dense);
+    numelyx_core_matrix_destroy(diagonal);
+    (void) diagonal_values;
+}
+
 int main(void)
 {
+    test_diagonal_products();
     test_rectangular_product();
     test_identity_and_zero_products();
     test_shape_overflow_and_read_failures();

@@ -102,6 +102,11 @@ static void test_rank_deficiency_and_zero_pivot(void)
 {
     const double singular_values[] = {1, 2, 2, 4};
     const double leading_zero_values[] = {0, 1, 0, 2};
+    const double skipped_pivot_values[] = {
+        0, 1, 0,
+        0, 0, 1,
+        0, 0, 0
+    };
     numelyx_core_matrix *matrix = NULL;
     numelyx_core_matrix_lu_factorization *lu = NULL;
 
@@ -119,6 +124,20 @@ static void test_rank_deficiency_and_zero_pivot(void)
         NUMERUS_MATRIX_SUCCESS);
     assert(numelyx_core_matrix_lu_rank(lu) == 1);
     assert(numelyx_core_matrix_lu_permutation_sign(lu) == 1);
+    numelyx_core_matrix_lu_destroy(lu);
+    numelyx_core_matrix_destroy(matrix);
+
+    /*
+     * LAPACK's GETRF stops at the first zero diagonal. Numerus preserves its
+     * historical exact-pivot rank policy by falling back to the native path,
+     * which can still find pivots in later columns.
+     */
+    assert(numelyx_core_matrix_create_dense(
+        3, 3, skipped_pivot_values, &matrix
+    ) == NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_lu_factorize(matrix, &lu) ==
+        NUMERUS_MATRIX_SUCCESS);
+    assert(numelyx_core_matrix_lu_rank(lu) == 2);
     numelyx_core_matrix_lu_destroy(lu);
     numelyx_core_matrix_destroy(matrix);
 }

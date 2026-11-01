@@ -8,6 +8,8 @@
 typedef struct {
     numelyx_core_lifetime lifetime;
     atomic_size_t operations;
+    atomic_size_t ready;
+    atomic_bool start;
     atomic_size_t *destroy_count;
 } test_object;
 
@@ -22,9 +24,13 @@ static int worker(void *argument)
     test_object *object = (test_object *) argument;
     size_t index;
 
-    /* The worker's retained reference protects the object for this loop. */
+    /* Acquire a worker-owned reference before the main thread releases its own. */
     assert(numelyx_core_lifetime_retain(&object->lifetime) ==
         NUMELYX_CORE_LIFETIME_SUCCESS);
+    atomic_fetch_add_explicit(&object->ready, 1, memory_order_release);
+    while (!atomic_load_explicit(&object->start, memory_order_acquire)) {
+        /* Wait until all workers are ready to release concurrently. */
+    }
 
     for (index = 0; index < 20000; index++) {
         assert(numelyx_core_lifetime_retain(&object->lifetime) ==
@@ -53,6 +59,8 @@ int main(void)
 
     atomic_init(&destroy_count, 0);
     atomic_init(&object.operations, 0);
+    atomic_init(&object.ready, 0);
+    atomic_init(&object.start, false);
     object.destroy_count = &destroy_count;
 
     assert(numelyx_core_lifetime_init(
@@ -62,6 +70,15 @@ int main(void)
     for (index = 0; index < THREAD_COUNT; index++) {
         assert(test_thread_create(&threads[index], worker, &object));
     }
+    while (atomic_load_explicit(&object.ready, memory_order_acquire) !=
+        THREAD_COUNT) {
+        /* Ensure every worker owns a reference before releasing the root. */
+    }
+    assert(numelyx_core_lifetime_release(
+        &object.lifetime, &object
+    ) == NUMELYX_CORE_LIFETIME_SUCCESS);
+    atomic_store_explicit(&object.start, true, memory_order_release);
+
     for (index = 0; index < THREAD_COUNT; index++) {
         int result = -1;
         assert(test_thread_join(&threads[index], &result));
@@ -71,13 +88,6 @@ int main(void)
     assert(atomic_load_explicit(
         &object.operations, memory_order_relaxed
     ) == THREAD_COUNT * 20000);
-    assert(atomic_load_explicit(
-        &destroy_count, memory_order_relaxed
-    ) == 0);
-
-    assert(numelyx_core_lifetime_release(
-        &object.lifetime, &object
-    ) == NUMELYX_CORE_LIFETIME_SUCCESS);
     assert(atomic_load_explicit(
         &destroy_count, memory_order_relaxed
     ) == 1);
